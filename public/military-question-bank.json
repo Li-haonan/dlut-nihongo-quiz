@@ -21635,7 +21635,7 @@
       },
       {
         "key": "D",
-        "text": "战争潜力"
+        "text": "军事实力"
       }
     ],
     "answerKey": "B",
@@ -21662,7 +21662,7 @@
     "groupId": "military-new-single",
     "groupTitle": "军理 新单选题",
     "numberInGroup": 15,
-    "stem": "兵役法规定，是古代军事制度的重要组成部分，()作为古代军事制度的核心。",
+    "stem": "()是古代军事制度的重要组成部分，是古代军事制度的核心。",
     "options": [
       {
         "key": "A",
@@ -21678,7 +21678,7 @@
       },
       {
         "key": "D",
-        "text": "兵役法"
+        "text": "国防制度"
       }
     ],
     "answerKey": "B",
@@ -21687,8 +21687,7 @@
     "explanation": "兵役制度是古代军事制度的核心，它规定了公民服兵役的权利和义务。",
     "grammarPoints": [],
     "tags": [
-      "单选题",
-      "法律法规"
+      "单选题"
     ],
     "source": {
       "file": "军理题库_整理版.md",
@@ -22097,25 +22096,25 @@
     "options": [
       {
         "key": "A",
-        "text": "军队"
+        "text": "察也"
       },
       {
         "key": "B",
-        "text": "武器"
+        "text": "慎也"
       },
       {
         "key": "C",
-        "text": "战争"
+        "text": "战也"
       },
       {
         "key": "D",
-        "text": "士兵"
+        "text": "谋也"
       }
     ],
-    "answerKey": "C",
-    "answerText": "战争",
+    "answerKey": "A",
+    "answerText": "察也",
     "translation": "",
-    "explanation": "出自《孙子兵法》，强调战争是国家大事，必须认真考察。",
+    "explanation": "出自《孙子兵法》，原文为\"兵者，国之大事，死生之地，存亡之道，不可不察也\"，强调战争是国家大事，必须认真考察。",
     "grammarPoints": [],
     "tags": [
       "单选题",
@@ -22393,29 +22392,29 @@
     "groupId": "military-new-single",
     "groupTitle": "军理 新单选题",
     "numberInGroup": 37,
-    "stem": "()是古代社会实践活动的主要内容之一，是决定战争胜负的重要因素。",
+    "stem": "()是决定战争胜负的重要因素。",
     "options": [
       {
         "key": "A",
-        "text": "农耕"
+        "text": "武器装备"
       },
       {
         "key": "B",
-        "text": "登基"
+        "text": "经济实力"
       },
       {
         "key": "C",
-        "text": "战争"
+        "text": "人心向背"
       },
       {
         "key": "D",
-        "text": "改革"
+        "text": "军事训练"
       }
     ],
     "answerKey": "C",
-    "answerText": "战争",
+    "answerText": "人心向背",
     "translation": "",
-    "explanation": "战争是古代社会实践活动的主要内容之一，是决定战争胜负的重要因素。",
+    "explanation": "人心向背是决定战争胜负的重要因素，得道多助失道寡助。",
     "grammarPoints": [],
     "tags": [
       "单选题"
@@ -22563,7 +22562,7 @@
     "groupId": "military-new-single",
     "groupTitle": "军理 新单选题",
     "numberInGroup": 42,
-    "stem": "1990年12月，江泽民明确提出了新时期军队建设的总要求，即\"政治合格、军事过硬、作风优良、纪律严明、保障有力\"，之外，还有？()",
+    "stem": "下列哪一项不属于江泽民提出的新时期军队建设\"五句话\"总要求？()",
     "options": [
       {
         "key": "A",
@@ -22571,21 +22570,21 @@
       },
       {
         "key": "B",
-        "text": "保障有力"
+        "text": "政治合格"
       },
       {
         "key": "C",
-        "text": "听觉指挥"
+        "text": "军事过硬"
       },
       {
         "key": "D",
-        "text": "服务人民"
+        "text": "纪律严明"
       }
     ],
     "answerKey": "A",
     "answerText": "英勇善战",
     "translation": "",
-    "explanation": "江泽民提出的新时期军队建设总要求为五句话，英勇善战不属于其中。",
+    "explanation": "江泽民提出的新时期军队建设总要求为\"政治合格、军事过硬、作风优良、纪律严明、保障有力\"五句话，英勇善战不属于其中。",
     "grammarPoints": [],
     "tags": [
       "单选题"
@@ -22651,7 +22650,7 @@
     "options": [
       {
         "key": "A",
-        "text": "人兴军战略"
+        "text": "人才兴军战略"
       },
       {
         "key": "B",
@@ -22667,9 +22666,9 @@
       }
     ],
     "answerKey": "A",
-    "answerText": "人兴军战略",
+    "answerText": "人才兴军战略",
     "translation": "",
-    "explanation": "人才兴军战略是国防和军队建设的根本指导思想。",
+    "explanation": "人才兴军战略是国防和军队建设的根本指导思想，强调人才是建军治军之本。",
     "grammarPoints": [],
     "tags": [
       "单选题",
@@ -22832,17 +22831,17 @@
       },
       {
         "key": "C",
-        "text": "军民融合"
+        "text": "军民一体"
       },
       {
         "key": "D",
         "text": "军民共管"
       }
     ],
-    "answerKey": "C",
+    "answerKey": "A",
     "answerText": "军民融合",
     "translation": "",
-    "explanation": "军民融合发展是统筹经济建设和国防建设的重要途径。",
+    "explanation": "军民融合发展是统筹经济建设和国防建设的重要途径，实现富国与强军的统一。",
     "grammarPoints": [],
     "tags": [
       "单选题",
@@ -24264,7 +24263,7 @@
     "groupId": "military-new-multi",
     "groupTitle": "军理 新多选题",
     "numberInGroup": 2,
-    "stem": "中国综合国力的抗衡，综合国力包括（），其中（）是综合国力的基本要素。（多选）",
+    "stem": "综合国力包括（）。（多选）",
     "options": [
       {
         "key": "A",
@@ -24281,16 +24280,12 @@
       {
         "key": "D",
         "text": "民族凝聚力"
-      },
-      {
-        "key": "E",
-        "text": "富于民"
       }
     ],
-    "answerKey": "ABC",
-    "answerText": "政治实力 / 经济实力 / 国防实力",
+    "answerKey": "ABCD",
+    "answerText": "政治实力 / 经济实力 / 国防实力 / 民族凝聚力",
     "translation": "",
-    "explanation": "综合国力主要包括政治实力、经济实力、国防实力三大要素。三者相互支撑、缺一不可。",
+    "explanation": "综合国力主要包括政治实力、经济实力、国防实力和民族凝聚力四大要素。四者相互支撑、缺一不可。",
     "grammarPoints": [],
     "tags": [
       "多选题",
@@ -24387,11 +24382,11 @@
       },
       {
         "key": "D",
-        "text": "参加防空的义务"
+        "text": "保护国防设施"
       },
       {
         "key": "E",
-        "text": "参加防务的义务"
+        "text": "保守国防秘密"
       },
       {
         "key": "F",
@@ -24399,17 +24394,17 @@
       },
       {
         "key": "G",
-        "text": "参加防务的义务"
+        "text": "接受国防教育"
       },
       {
         "key": "H",
         "text": "参加国防教育的义务"
       }
     ],
-    "answerKey": "CEFGH",
-    "answerText": "兵役义务 / 参加防务的义务 / 参加国防建设的义务 / 参加防务的义务 / 参加国防教育的义务",
+    "answerKey": "ACDEFGH",
+    "answerText": "服兵役 / 兵役义务 / 保护国防设施 / 保守国防秘密 / 参加国防建设的义务 / 接受国防教育 / 参加国防教育的义务",
     "translation": "",
-    "explanation": "根据《国防法》规定，公民国防义务主要包括兵役义务、参加防务的义务、参加国防建设的义务、参加国防教育的义务。",
+    "explanation": "根据《国防法》规定，公民国防义务主要包括兵役义务、保护国防设施、保守国防秘密、参加国防建设、接受国防教育等。",
     "grammarPoints": [],
     "tags": [
       "多选题",
@@ -24431,7 +24426,7 @@
     "groupId": "military-new-multi",
     "groupTitle": "军理 新多选题",
     "numberInGroup": 5,
-    "stem": "中国人民解放军建军主要由（）组成。（多选）",
+    "stem": "中国人民解放军由（）组成。（多选）",
     "options": [
       {
         "key": "A",
@@ -24458,10 +24453,10 @@
         "text": "武警部队"
       }
     ],
-    "answerKey": "BCDE",
-    "answerText": "海军 / 空军 / 火箭军 / 战略支援部队",
+    "answerKey": "ABCDE",
+    "answerText": "陆军 / 海军 / 空军 / 火箭军 / 战略支援部队",
     "translation": "",
-    "explanation": "2015年军改后，中国人民解放军由海军、空军、火箭军、战略支援部队等军种组成。",
+    "explanation": "中国人民解放军由陆军、海军、空军、火箭军、战略支援部队五大军种组成。武警部队属于武装力量但不属于解放军序列。\n\n**解析**：2015年军改后，中国人民解放军由海军、空军、火箭军、战略支援部队等军种组成。",
     "grammarPoints": [],
     "tags": [
       "多选题",
@@ -24526,41 +24521,34 @@
     "groupId": "military-new-multi",
     "groupTitle": "军理 新多选题",
     "numberInGroup": 7,
-    "stem": "中国人民解放军空军航空兵主要由（）组成。（多选）",
+    "stem": "中国人民解放军空军主要由（）等兵种组成。（多选）",
     "options": [
       {
         "key": "A",
-        "text": "歼击机"
+        "text": "航空兵"
       },
       {
         "key": "B",
-        "text": "武装直升机"
+        "text": "地面防空兵"
       },
       {
         "key": "C",
-        "text": "轰炸机"
+        "text": "空降兵"
       },
       {
         "key": "D",
-        "text": "预警机"
-      },
-      {
-        "key": "E",
-        "text": "强击机"
-      },
-      {
-        "key": "F",
-        "text": "运输直升机"
+        "text": "雷达兵"
       }
     ],
-    "answerKey": "BF",
-    "answerText": "武装直升机 / 运输直升机",
+    "answerKey": "ABCD",
+    "answerText": "航空兵 / 地面防空兵 / 空降兵 / 雷达兵",
     "translation": "",
-    "explanation": "空军航空兵主要由武装直升机和运输直升机两大类组成。",
+    "explanation": "中国人民解放军空军主要由航空兵、地面防空兵、空降兵、雷达兵等兵种组成。",
     "grammarPoints": [],
     "tags": [
       "多选题",
-      "武装力量"
+      "武装力量",
+      "军事技术"
     ],
     "source": {
       "file": "军理题库_整理版.md",
@@ -24886,49 +24874,33 @@
     "options": [
       {
         "key": "A",
-        "text": "打击反动势力"
-      },
-      {
-        "key": "B",
         "text": "永不称霸"
       },
       {
+        "key": "B",
+        "text": "不扩张"
+      },
+      {
         "key": "C",
-        "text": "永远不称霸"
-      },
-      {
-        "key": "D",
-        "text": "全球军事部署"
-      },
-      {
-        "key": "E",
         "text": "不做超级大国"
       },
       {
-        "key": "F",
-        "text": "保护周边弱小国家"
+        "key": "D",
+        "text": "不首先使用核武器"
       },
       {
-        "key": "G",
-        "text": "不再先使用核武器"
-      },
-      {
-        "key": "H",
+        "key": "E",
         "text": "不对无核国家和地区使用核武器"
       },
       {
-        "key": "I",
-        "text": "积极发展太空"
-      },
-      {
-        "key": "J",
+        "key": "F",
         "text": "不侵略别国"
       }
     ],
-    "answerKey": "BCEHJ",
-    "answerText": "永不称霸 / 永远不称霸 / 不做超级大国 / 不对无核国家和地区使用核武器 / 不侵略别国",
+    "answerKey": "ACDEF",
+    "answerText": "永不称霸 / 不做超级大国 / 不首先使用核武器 / 不对无核国家和地区使用核武器 / 不侵略别国",
     "translation": "",
-    "explanation": "我国实行自卫型国防，公开宣示永不称霸、不做超级大国、不侵略别国。",
+    "explanation": "我国实行自卫型国防，公开宣示永不称霸、不做超级大国、不首先使用核武器、不对无核国家使用核武器、不侵略别国。",
     "grammarPoints": [],
     "tags": [
       "多选题",
