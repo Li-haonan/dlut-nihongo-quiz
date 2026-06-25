@@ -113,7 +113,11 @@ const CHAPTER_HDR = /^##\s+([一二三四五六七八九十]+)、\s*(.+?)\s*$/
 function detectAnswerType(
   raw: string,
   options: { key: string; text: string }[],
-): { kind: 'single' | 'multi' | 'judgement' | 'fill' | 'skip'; normalized: string; reason?: string } {
+): {
+  kind: 'single' | 'multi' | 'judgement' | 'fill' | 'skip'
+  normalized: string
+  reason?: string
+} {
   // Strip anything in/after parens (e.g. "错误（实质错误——…）" → "错误")
   const stripped = raw.replace(/[（(].*$/, '').trim()
   const cleaned = stripped.replace(/[\.。、\s]/g, '').toUpperCase()
