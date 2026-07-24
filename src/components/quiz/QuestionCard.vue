@@ -1,8 +1,12 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import type { Question } from '../../types/question'
 import { UI } from '../../constants'
-import { toggleMultiSelect, isMultiAnswerCorrect } from '../../utils/multiAnswer'
+import {
+  toggleMultiSelect,
+  isMultiAnswerCorrect,
+  isFillAnswerCorrect,
+} from '../../utils/multiAnswer'
 import { renderExplanation } from '../../utils/renderExplanation'
 import { renderMarkdown } from '../../utils/renderMarkdown'
 import { useAI } from '../../composables/useAI'
@@ -45,6 +49,11 @@ const isFillQuestion = computed(() => props.question.questionType === 'fill')
 
 const showExplanation = ref(props.showExplanation ?? false)
 const shareStatus = ref<'' | 'copied' | 'unsupported'>('')
+const shareTimer = ref<ReturnType<typeof setTimeout> | null>(null)
+
+onUnmounted(() => {
+  if (shareTimer.value) clearTimeout(shareTimer.value)
+})
 
 // 同步父组件的 showExplanation prop 变化
 watch(
@@ -52,6 +61,7 @@ watch(
   (val) => {
     if (val !== undefined) showExplanation.value = val
   },
+  { immediate: true },
 )
 
 const dragOffset = ref(0)
@@ -61,9 +71,22 @@ let dragStartY = 0
 let dragPointer: number | null = null
 let dragHorizontal: boolean | null = null
 
-// 缓存 isMobile 结果，避免在每次 pointer event 中重复查询
-const isMobile =
-  typeof window !== 'undefined' ? window.matchMedia('(max-width: 480px)').matches : false
+// 响应式 isMobile，窗口缩放时自动更新
+const isMobile = ref(
+  typeof window !== 'undefined' ? window.matchMedia('(max-width: 480px)').matches : false,
+)
+let mql: MediaQueryList | null = null
+let mqlHandler: ((e: MediaQueryListEvent) => void) | null = null
+onMounted(() => {
+  mql = window.matchMedia('(max-width: 480px)')
+  mqlHandler = (e: MediaQueryListEvent) => {
+    isMobile.value = e.matches
+  }
+  mql.addEventListener('change', mqlHandler)
+})
+onUnmounted(() => {
+  if (mql && mqlHandler) mql.removeEventListener('change', mqlHandler)
+})
 
 /** 检查鼠标点击位置是否在可选择文字的元素上（题干、选项文本、解析等） */
 function isOnSelectableText(target: EventTarget | null): boolean {
@@ -116,7 +139,7 @@ function onPointerUp(e: PointerEvent) {
   dragActive.value = false
   dragOffset.value = 0
   if (!wasActive) return
-  const threshold = isMobile ? UI.SWIPE_THRESHOLD_MOBILE : UI.SWIPE_THRESHOLD
+  const threshold = isMobile.value ? UI.SWIPE_THRESHOLD_MOBILE : UI.SWIPE_THRESHOLD
   if (Math.abs(offset) < threshold) return
   if (offset > 0) emit('swipe-prev')
   else emit('swipe-next')
@@ -130,12 +153,12 @@ async function handleShare() {
     } else if (navigator.clipboard?.writeText) {
       await navigator.clipboard.writeText(url)
       shareStatus.value = 'copied'
-      setTimeout(() => {
+      shareTimer.value = setTimeout(() => {
         shareStatus.value = ''
       }, 1500)
     } else {
       shareStatus.value = 'unsupported'
-      setTimeout(() => {
+      shareTimer.value = setTimeout(() => {
         shareStatus.value = ''
       }, 2000)
     }
@@ -198,7 +221,7 @@ function openAIChat() {
   showAIChat.value = true
 }
 
-const optionLabels = ['A', 'B', 'C', 'D', 'E']
+const optionLabels = UI.OPTION_LABELS
 
 function isSelected(key: string) {
   return props.selectedKey.includes(key)
@@ -237,9 +260,7 @@ const renderedStem = computed(() => renderMarkdown(props.question.stem))
 const isCorrectOverall = computed(() => {
   if (isFillQuestion.value) {
     // 填空题：忽略大小写和首尾空格进行比较
-    const userAnswer = fillAnswer.value.trim().toLowerCase()
-    const correctAnswer = props.question.answerText.trim().toLowerCase()
-    return userAnswer === correctAnswer
+    return isFillAnswerCorrect(fillAnswer.value, props.question.answerText)
   }
   if (props.question.multiAnswer) {
     return isMultiAnswerCorrect(props.selectedKey, props.question.answerKey)
@@ -304,6 +325,7 @@ const dragOpacity = computed(() => {
         type="text"
         class="fill-input"
         placeholder="请输入答案..."
+        aria-label="填空题答案输入"
         :disabled="submitted"
         @input="handleFillInput"
         @keyup.enter="emit('submit')"

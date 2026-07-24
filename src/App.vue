@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
+import { useRouter, useRoute, RouterLink } from 'vue-router'
 import {
   useActiveCategory,
   loadActiveCategory,
@@ -133,12 +133,15 @@ async function handleSearchNavigate(questionId: string) {
 </script>
 <template>
   <div class="app-shell">
-    <nav class="nav">
+    <!-- 跳过导航直达主内容 — 键盘用户快捷键 -->
+    <a href="#main-content" class="skip-to-content">跳到主内容</a>
+    <nav class="nav" aria-label="主导航">
       <div class="nav-left">
         <button
           class="nav-drawer-btn"
           @click="drawerOpen = !drawerOpen"
           :aria-expanded="drawerOpen"
+          aria-controls="drawer-panel"
           aria-label="课程菜单"
         >
           <span></span>
@@ -148,14 +151,9 @@ async function handleSearchNavigate(questionId: string) {
         <div class="nav-brand" @click="router.push('/')">题库</div>
       </div>
       <div class="nav-desktop-links">
-        <a
-          v-for="l in navLinks"
-          :key="l.to"
-          :class="{ 'router-link-active': route.path === l.to }"
-          href="#"
-          @click.prevent="navigateTo(l.to)"
-          >{{ l.label }}</a
-        >
+        <RouterLink v-for="l in navLinks" :key="l.to" :to="l.to" @click="navigateTo(l.to)">{{
+          l.label
+        }}</RouterLink>
         <button class="search-trigger" @click="searchOpen = true">⌕ 搜索</button>
         <a
           class="github-star-btn"
@@ -191,7 +189,7 @@ async function handleSearchNavigate(questionId: string) {
 
     <Transition name="drawer">
       <div v-if="drawerOpen" class="drawer-backdrop" @click="drawerOpen = false">
-        <div class="drawer-panel" @click.stop>
+        <div class="drawer-panel" id="drawer-panel" @click.stop>
           <div class="drawer-header">
             <span class="drawer-title">课程导航</span>
             <button class="drawer-close" @click="drawerOpen = false" aria-label="关闭">✕</button>
@@ -200,13 +198,12 @@ async function handleSearchNavigate(questionId: string) {
             <div class="drawer-section">
               <div class="drawer-section-title">主导航</div>
               <div class="drawer-nav-links">
-                <a
+                <RouterLink
                   v-for="l in navLinks"
                   :key="l.to"
-                  :class="{ 'router-link-active': route.path === l.to }"
-                  href="#"
-                  @click.prevent="navigateTo(l.to)"
-                  >{{ l.label }}</a
+                  :to="l.to"
+                  @click="navigateTo(l.to)"
+                  >{{ l.label }}</RouterLink
                 >
                 <button class="mobile-search-trigger" @click="openSearch">⌕ 搜索题目</button>
               </div>
@@ -227,7 +224,7 @@ async function handleSearchNavigate(questionId: string) {
       </div>
     </Transition>
 
-    <main class="main">
+    <main class="main" id="main-content">
       <router-view v-slot="{ Component }">
         <transition name="page-fade" mode="out-in">
           <component :is="Component" :key="routeKey" />
@@ -238,6 +235,9 @@ async function handleSearchNavigate(questionId: string) {
       <div class="footer-inner">
         <span
           class="footer-copyright"
+          tabindex="0"
+          role="button"
+          aria-label="长按进入暗阁"
           @mousedown="onPressStart"
           @mousemove="onPressMove"
           @mouseup="onPressEnd"
@@ -245,6 +245,8 @@ async function handleSearchNavigate(questionId: string) {
           @touchstart="onPressStart"
           @touchmove="onPressMove"
           @touchend="onPressEnd"
+          @keydown.enter.prevent="startLongPress"
+          @keydown.space.prevent="startLongPress"
         >
           <span class="press-ring" :style="{ width: unlockProgress + '%' }"></span>
           题库 &copy; 2025 tianxingleo
@@ -256,6 +258,8 @@ async function handleSearchNavigate(questionId: string) {
         <span class="footer-sep">·</span>
         <span>DLUT 国际信息与软件学院</span>
         <template v-if="isUnlocked">
+          <span class="footer-sep">·</span>
+          <button class="footer-exit-btn" @click="router.push('/hidden-portal')">暗阁</button>
           <span class="footer-sep">·</span>
           <button class="footer-exit-btn" @click="exitHidden">合上</button>
         </template>
@@ -275,6 +279,26 @@ async function handleSearchNavigate(questionId: string) {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+}
+
+/* 跳过导航链接 — 对屏幕阅读器和键盘用户可见，普通用户隐藏 */
+.skip-to-content {
+  position: absolute;
+  top: -100%;
+  left: 0;
+  z-index: 9999;
+  padding: 8px 16px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: top 0.1s;
+}
+.skip-to-content:focus {
+  top: 0;
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .nav {
@@ -374,11 +398,11 @@ async function handleSearchNavigate(questionId: string) {
   color: var(--text-primary);
   background: var(--bg-hover);
 }
-.nav-desktop-links a.router-link-active {
+.nav-desktop-links a.router-link-exact-active {
   color: var(--accent);
   font-weight: 500;
 }
-.nav-desktop-links a.router-link-active::after {
+.nav-desktop-links a.router-link-exact-active::after {
   transform: scaleX(1);
 }
 
@@ -545,7 +569,7 @@ async function handleSearchNavigate(questionId: string) {
 .drawer-nav-links button:hover {
   background: var(--bg-hover);
 }
-.drawer-nav-links a.router-link-active {
+.drawer-nav-links a.router-link-exact-active {
   color: var(--accent);
   font-weight: 500;
 }

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { exportData, importData, clearAllData } from '../db/database'
 import { getCategoryCounts } from '../services/quizEngine'
 import { CATEGORIES } from '../config/categories'
@@ -16,6 +16,7 @@ const { darkMode, dailyGoal, toggleDark, saveDailyGoal, applyTheme, loadSettings
 const { aiEnabled, aiConfig, saveAIConfig, toggleAI, testConnection: testAIConnection } = useAI()
 const counts = ref<Record<Category, number>>({} as Record<Category, number>)
 const confirmClear = ref(false)
+let clearTimer: ReturnType<typeof setTimeout> | null = null
 const appVersion = import.meta.env.PACKAGE_VERSION || '0.0.0'
 
 // AI 配置表单
@@ -41,17 +42,26 @@ onMounted(async () => {
     if (aiConfig.value) {
       aiForm.value = { ...aiConfig.value }
     }
-  } catch {
+  } catch (e) {
     // 设置页加载失败不阻断页面，题库计数会显示 "—"
+    console.warn('设置页加载失败:', e)
     applyTheme()
+  }
+})
+
+onUnmounted(() => {
+  if (clearTimer) {
+    clearTimeout(clearTimer)
+    clearTimer = null
   }
 })
 
 async function refreshCounts() {
   try {
     counts.value = await getCategoryCounts()
-  } catch {
+  } catch (e) {
     // 刷新失败不阻断页面
+    console.warn('刷新题库计数失败:', e)
   }
 }
 
@@ -105,8 +115,15 @@ function handleImport() {
 async function handleClear() {
   if (!confirmClear.value) {
     confirmClear.value = true
-    setTimeout(() => (confirmClear.value = false), UI.CLEAR_CONFIRM_TIMEOUT)
+    clearTimer = setTimeout(() => {
+      confirmClear.value = false
+      clearTimer = null
+    }, UI.CLEAR_CONFIRM_TIMEOUT)
     return
+  }
+  if (clearTimer) {
+    clearTimeout(clearTimer)
+    clearTimer = null
   }
   await clearAllData()
   confirmClear.value = false
@@ -192,12 +209,14 @@ const totalCount = computed(() => Object.values(counts.value).reduce((a, b) => a
             min="1"
             max="200"
             class="goal-input"
+            :class="{ 'input-error': dailyGoal < 1 || dailyGoal > 200 }"
             @change="saveDailyGoal()"
             @blur="saveDailyGoal()"
           />
           <span class="goal-unit">题/天</span>
         </div>
       </div>
+      <p v-if="dailyGoal < 1 || dailyGoal > 200" class="validation-hint">请输入 1-200 之间的数字</p>
     </div>
 
     <div class="section">
@@ -303,6 +322,7 @@ const totalCount = computed(() => Object.values(counts.value).reduce((a, b) => a
           v-if="testResult"
           class="test-result"
           :class="testResult.success ? 'success' : 'error'"
+          role="alert"
         >
           {{ testResult.message }}
         </div>
@@ -442,6 +462,14 @@ h1 {
 .goal-unit {
   font-size: 13px;
   color: var(--text-muted);
+}
+.input-error {
+  border-color: var(--wrong) !important;
+}
+.validation-hint {
+  color: var(--wrong);
+  font-size: 12px;
+  margin-top: 4px;
 }
 
 .shortcut-list {

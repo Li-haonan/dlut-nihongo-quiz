@@ -28,7 +28,7 @@ function restoreState() {
       furiganaEnabled.value = true
     }
   } catch {
-    // localStorage 不可用时忽略
+    console.warn('localStorage 不可用，注音状态无法持久化')
   }
 }
 
@@ -39,7 +39,7 @@ function saveState(enabled: boolean) {
   try {
     localStorage.setItem('furigana-enabled', String(enabled))
   } catch {
-    // localStorage 不可用时忽略
+    console.warn('localStorage 不可用，注音状态无法持久化')
   }
 }
 

@@ -584,7 +584,7 @@ const subjectCount = computed(() => CATEGORIES.length)
   margin-top: 8px;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 639px) {
   .hero {
     padding: 40px 0 32px;
   }

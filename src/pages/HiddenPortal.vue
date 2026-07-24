@@ -1,14 +1,11 @@
 <script setup lang="ts">
 import { ref, computed, nextTick, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { Marked } from 'marked'
 import { useHiddenSite } from '../composables/useHiddenSite'
 import { setActiveCategory, setActiveSubBankKey } from '../services/categoryStore'
 import GrammarToc from '../components/notes/GrammarToc.vue'
-import { sanitizeHtml } from '../utils/renderMarkdown'
+import { markdownRenderer, sanitizeHtml } from '../utils/renderMarkdown'
 import rawNotes from '../content/grammar-notes.md?raw'
-
-const markdownRenderer = new Marked({ gfm: true, breaks: false })
 
 const router = useRouter()
 const { isUnlocked, lock } = useHiddenSite()

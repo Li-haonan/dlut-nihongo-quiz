@@ -90,6 +90,7 @@ function highlightMatch(text: string, kw: string): string {
           v-model="keyword"
           class="search-input"
           placeholder="搜索题目…"
+          aria-label="搜索题目"
           autocomplete="off"
           spellcheck="false"
         />
@@ -108,7 +109,14 @@ function highlightMatch(text: string, kw: string): string {
         <button class="search-close-btn" aria-label="关闭搜索" @click="emit('close')">✕</button>
       </div>
       <div class="search-body">
-        <div v-if="results.length > 0" class="search-results" role="listbox" aria-label="搜索结果">
+        <div
+          v-if="results.length > 0"
+          class="search-results"
+          role="listbox"
+          aria-label="搜索结果"
+          aria-live="polite"
+          aria-atomic="true"
+        >
           <div
             v-for="q in results"
             :key="q.id"

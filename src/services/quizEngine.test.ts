@@ -67,10 +67,11 @@ describe('shuffleQuestionOptions', () => {
     expect(shuffled.options.map((o) => o.text).sort()).toEqual(q.options.map((o) => o.text).sort())
   })
 
-  it('returns the question unchanged when multiAnswer is set', () => {
+  it('returns a shallow copy when multiAnswer is set (prevents shared mutation)', () => {
     const q = baseQuestion({ multiAnswer: true })
     const shuffled = shuffleQuestionOptions(q)
-    expect(shuffled).toBe(q)
+    expect(shuffled).toStrictEqual(q)
+    expect(shuffled).not.toBe(q)
   })
 
   it('returns the question unchanged when correct option cannot be found', () => {

@@ -54,6 +54,17 @@ export const UI = {
   DAILY_GOAL_MAX: 200,
   /** 错题清除确认超时 (ms) */
   CLEAR_CONFIRM_TIMEOUT: 5000,
+  /** 选项字母标签 */
+  OPTION_LABELS: ['A', 'B', 'C', 'D', 'E'] as const,
+  /** 薄弱标签在首页最多展示数 */
+  WEAK_TAGS_MAX: 8,
+  /** 热力图档位阈值与对应的等级 */
+  HEATMAP_LEVELS: [
+    { min: 16, level: 3 },
+    { min: 6, level: 2 },
+    { min: 1, level: 1 },
+    { min: 0, level: 0 },
+  ] as const,
 } as const
 
 // ─── 缓存 ──────────────────────────────────────────────────

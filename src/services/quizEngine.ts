@@ -36,5 +36,5 @@ export {
 } from './questionAggregate'
 
 // 从其他模块透传的便捷导出
-export { toggleMultiSelect, isMultiAnswerCorrect } from '../utils/multiAnswer'
+export { toggleMultiSelect, isMultiAnswerCorrect, isFillAnswerCorrect } from '../utils/multiAnswer'
 export { getCategoryMeta } from '../config/categories'

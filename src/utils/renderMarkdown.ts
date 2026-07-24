@@ -2,7 +2,7 @@ import { Marked } from 'marked'
 import DOMPurify from 'dompurify'
 import { CACHE } from '../constants'
 
-const markdownRenderer = new Marked()
+export const markdownRenderer = new Marked()
 
 // Strip inline markdown for plain-text contexts (search, truncation)
 export function stripMarkdown(md: string): string {

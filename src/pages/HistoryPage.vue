@@ -72,11 +72,7 @@ onMounted(async () => {
   await refreshList()
 })
 
-watch(activeCategory, () => {
-  refreshList()
-})
-
-watch(isUnlocked, () => {
+watch([activeCategory, isUnlocked], () => {
   refreshList()
 })
 
@@ -148,20 +144,20 @@ function goReview(questionId: string) {
 
       <div class="toolbar">
         <div class="filters">
-          <select v-model="filterCategory" class="filter-select">
+          <select v-model="filterCategory" class="filter-select" aria-label="按学科筛选">
             <option value="all">全部学科</option>
             <option value="japanese2">综合日语2</option>
             <option value="history">中国近现代史</option>
             <option value="party">党史</option>
             <option value="military">军事理论</option>
           </select>
-          <select v-model="filterDateRange" class="filter-select">
+          <select v-model="filterDateRange" class="filter-select" aria-label="按时间范围筛选">
             <option value="all">全部时间</option>
             <option value="today">今天</option>
             <option value="week">最近7天</option>
             <option value="month">最近30天</option>
           </select>
-          <select v-model="filterResult" class="filter-select">
+          <select v-model="filterResult" class="filter-select" aria-label="按答题结果筛选">
             <option value="all">全部结果</option>
             <option value="correct">仅正确</option>
             <option value="wrong">仅错误</option>

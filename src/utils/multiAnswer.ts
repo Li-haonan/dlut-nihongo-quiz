@@ -10,3 +10,10 @@ export function isMultiAnswerCorrect(selected: string, answer: string): boolean 
   const b = new Set(answer.split(''))
   return a.size === b.size && [...a].every((x) => b.has(x))
 }
+
+/**
+ * 填空题判分：忽略大小写和首尾空格进行比较
+ */
+export function isFillAnswerCorrect(userAnswer: string, correctAnswer: string): boolean {
+  return userAnswer.trim().toLowerCase() === correctAnswer.trim().toLowerCase()
+}

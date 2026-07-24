@@ -7,6 +7,7 @@ import {
   shuffleArray,
   generateSessionId,
   isMultiAnswerCorrect,
+  isFillAnswerCorrect,
   filterVisibleQuestions,
 } from '../services/quizEngine'
 import {
@@ -59,6 +60,7 @@ const timerInterval = ref<ReturnType<typeof setInterval> | null>(null)
 const isExamMode = ref(false)
 const wrongRedo = ref(false)
 const examTimeLimit = ref(60 * 60) // 默认 60 分钟（秒）
+const examEndTime = ref(0) // 考试结束时的 Date.now() 目标值
 const remainingTime = ref(0)
 const examTimerInterval = ref<ReturnType<typeof setInterval> | null>(null)
 const history = ref<Array<{ questionId: string; selectedKey: string; isCorrect: boolean }>>([])
@@ -168,15 +170,17 @@ function stopTimer() {
 
 function startExamTimer() {
   if (!isExamMode.value) return
-  remainingTime.value = examTimeLimit.value
-  examTimerInterval.value = setInterval(() => {
-    remainingTime.value--
-    if (remainingTime.value <= 0) {
+  examEndTime.value = Date.now() + examTimeLimit.value * 1000
+  const tick = () => {
+    const diff = Math.max(0, Math.round((examEndTime.value - Date.now()) / 1000))
+    remainingTime.value = diff
+    if (diff <= 0) {
       stopExamTimer()
-      // 时间到自动交卷
       handleExamTimeUp()
     }
-  }, 1000)
+  }
+  tick()
+  examTimerInterval.value = setInterval(tick, 1000)
 }
 
 function stopExamTimer() {
@@ -288,6 +292,99 @@ function resolveMode(all: Question[]): {
   return { poolMode, displayMode, pool, shuffle }
 }
 
+/**
+ * 尝试恢复已中断的答题会话（返回 true 表示已恢复，无需新建）
+ */
+async function tryRestoreSession(all: Question[]): Promise<boolean> {
+  // preload bookmark status so the watch on currentQuestion doesn't hit IndexedDB
+  const allStats = await db.questionStats.toArray()
+  bookmarkCache.value = new Set(allStats.filter((s) => s.isBookmarked).map((s) => s.questionId))
+
+  // 恢复条件：从首页"继续上次"进来（resume=1），或直接刷新页面且存盘会话属于当前入口。
+  // fresh=1 表示用户从首页/错题本/搜索主动点入口要开新一轮，此时即使签名相同也不恢复（开新轮）。
+  // 后者（刷新自动恢复）避免了刷新后用初始状态（1/N）覆盖掉真实进度。
+  const saved = await loadActiveSession()
+  const explicitResume = route.query.resume === '1'
+  const wantsFresh = route.query.fresh === '1'
+  wrongRedo.value = route.query.redo === '1'
+  const sameEntry = !wantsFresh && saved?.entryKey != null && saved.entryKey === computeEntryKey()
+  // 无 query 参数直接进 /quiz（顶栏"刷题"、地址栏输入等）视为"继续上次"
+  const bareQuizEntry = Object.keys(route.query).length === 0
+  if (((explicitResume || sameEntry) && isSessionInProgress(saved)) || (bareQuizEntry && saved)) {
+    const map = new Map(all.map((q) => [q.id, q] as const))
+    questions.value = saved.questionIds.map((id) => map.get(id)).filter((q): q is Question => !!q)
+    sessionId.value = saved.sessionId
+    mode.value = saved.mode
+    correctCount.value = saved.correctCount
+    wrongList.value = [...saved.wrongList]
+    startedAt.value = saved.startedAt
+    currentIndex.value = saved.submitted ? saved.currentIndex + 1 : saved.currentIndex
+    submitted.value = false
+    selectedKey.value = ''
+    startTime.value = Date.now()
+    // 恢复 history、elapsedTime 和 drafts（AI 辅助功能相关）
+    history.value = saved.history || []
+    elapsedTime.value = saved.elapsedSeconds || 0
+    wrongRedo.value = saved.wrongRedo || false
+    if (saved.drafts) {
+      const draftsMap = new Map<number, string>()
+      Object.entries(saved.drafts).forEach(([key, value]) => {
+        draftsMap.set(Number(key), value)
+      })
+      drafts.value = draftsMap
+    }
+    return true
+  }
+
+  // 主动开新一轮：把 fresh 标记从 URL 抹掉，这样之后刷新（F5）能匹配 entryKey 自动恢复进度。
+  if (wantsFresh) {
+    const { fresh: _fresh, ...rest } = route.query
+    router.replace({ path: route.path, query: rest })
+  }
+
+  return false
+}
+
+/**
+ * 根据 URL 参数解析模式并启动新会话
+ */
+async function startNewSession(all: Question[]) {
+  const resolved = resolveMode(all)
+  poolMode.value = resolved.poolMode
+  mode.value = resolved.displayMode
+
+  let finalPool = resolved.pool
+  if (resolved.poolMode === 'random') {
+    finalPool = shuffleArray(resolved.pool)
+  } else if (resolved.poolMode === 'weakness') {
+    const stats = await db.questionStats.toArray()
+    const validIds = new Set(all.map((q) => q.id))
+    const weakIds = stats
+      .filter((s) => validIds.has(s.questionId) && s.masteryLevel <= 2)
+      .map((s) => s.questionId)
+    const weakSet = new Set(weakIds)
+    const priorityQuestions = weakIds
+      .map((id) => all.find((q) => q.id === id))
+      .filter((q): q is Question => !!q)
+    const remaining = shuffleArray(all.filter((q) => !weakSet.has(q.id)))
+    finalPool = [...priorityQuestions, ...remaining]
+  } else if (resolved.poolMode === 'exam') {
+    finalPool = shuffleArray([...all])
+    isExamMode.value = true
+  } else if (
+    (resolved.poolMode === 'untouched' || resolved.poolMode === 'wrong') &&
+    resolved.shuffle
+  ) {
+    finalPool = shuffleArray(resolved.pool)
+  }
+  questions.value = finalPool
+
+  sessionId.value = generateSessionId()
+  startTime.value = Date.now()
+  startedAt.value = new Date().toISOString()
+  await saveActiveSession(snapshot(false))
+}
+
 onMounted(async () => {
   try {
     await loadActiveCategory()
@@ -301,87 +398,12 @@ onMounted(async () => {
     // 表站未解锁时剔除里站题（requireUnlock subBank 的 groupOrder）。里站入口设了 subBank 后 isUnlocked 必为 true，no-op。
     const all = filterVisibleQuestions(await loadQuestionBank(cat), isUnlocked.value)
 
-    // preload bookmark status so the watch on currentQuestion doesn't hit IndexedDB
-    const allStats = await db.questionStats.toArray()
-    bookmarkCache.value = new Set(allStats.filter((s) => s.isBookmarked).map((s) => s.questionId))
-
-    // 恢复条件：从首页"继续上次"进来（resume=1），或直接刷新页面且存盘会话属于当前入口。
-    // fresh=1 表示用户从首页/错题本/搜索主动点入口要开新一轮，此时即使签名相同也不恢复（开新轮）。
-    // 后者（刷新自动恢复）避免了刷新后用初始状态（1/N）覆盖掉真实进度。
-    const saved = await loadActiveSession()
-    const explicitResume = route.query.resume === '1'
-    const wantsFresh = route.query.fresh === '1'
-    wrongRedo.value = route.query.redo === '1'
-    const sameEntry = !wantsFresh && saved?.entryKey != null && saved.entryKey === computeEntryKey()
-    // 无 query 参数直接进 /quiz（顶栏"刷题"、地址栏输入等）视为"继续上次"
-    const bareQuizEntry = Object.keys(route.query).length === 0
-    if (((explicitResume || sameEntry) && isSessionInProgress(saved)) || (bareQuizEntry && saved)) {
-      const map = new Map(all.map((q) => [q.id, q] as const))
-      questions.value = saved.questionIds.map((id) => map.get(id)!).filter(Boolean)
-      sessionId.value = saved.sessionId
-      mode.value = saved.mode
-      correctCount.value = saved.correctCount
-      wrongList.value = [...saved.wrongList]
-      startedAt.value = saved.startedAt
-      currentIndex.value = saved.submitted ? saved.currentIndex + 1 : saved.currentIndex
-      submitted.value = false
-      selectedKey.value = ''
-      startTime.value = Date.now()
-      // 恢复 history、elapsedTime 和 drafts（AI 辅助功能相关）
-      history.value = saved.history || []
-      elapsedTime.value = saved.elapsedSeconds || 0
-      wrongRedo.value = saved.wrongRedo || false
-      if (saved.drafts) {
-        const draftsMap = new Map<number, string>()
-        Object.entries(saved.drafts).forEach(([key, value]) => {
-          draftsMap.set(Number(key), value)
-        })
-        drafts.value = draftsMap
-      }
-      startTimer()
-      window.addEventListener('keydown', onKeydown)
-      window.addEventListener('beforeunload', onBeforeUnload)
-      return
+    // 尝试恢复会话，若已恢复则无需新建
+    const resumed = await tryRestoreSession(all)
+    if (!resumed) {
+      await startNewSession(all)
     }
 
-    // 主动开新一轮：把 fresh 标记从 URL 抹掉，这样之后刷新（F5）能匹配 entryKey 自动恢复进度。
-    if (wantsFresh) {
-      const { fresh: _fresh, ...rest } = route.query
-      router.replace({ path: route.path, query: rest })
-    }
-
-    const resolved = resolveMode(all)
-    poolMode.value = resolved.poolMode
-    mode.value = resolved.displayMode
-
-    let finalPool = resolved.pool
-    if (resolved.poolMode === 'random') {
-      finalPool = shuffleArray(resolved.pool)
-    } else if (resolved.poolMode === 'weakness') {
-      const stats = await db.questionStats.toArray()
-      const validIds = new Set(all.map((q) => q.id))
-      const weakIds = stats
-        .filter((s) => validIds.has(s.questionId) && s.masteryLevel <= 2)
-        .map((s) => s.questionId)
-      const weakSet = new Set(weakIds)
-      const priorityQuestions = weakIds.map((id) => all.find((q) => q.id === id)!).filter(Boolean)
-      const remaining = shuffleArray(all.filter((q) => !weakSet.has(q.id)))
-      finalPool = [...priorityQuestions, ...remaining]
-    } else if (resolved.poolMode === 'exam') {
-      finalPool = shuffleArray([...all])
-      isExamMode.value = true
-    } else if (
-      (resolved.poolMode === 'untouched' || resolved.poolMode === 'wrong') &&
-      resolved.shuffle
-    ) {
-      finalPool = shuffleArray(resolved.pool)
-    }
-    questions.value = finalPool
-
-    sessionId.value = generateSessionId()
-    startTime.value = Date.now()
-    startedAt.value = new Date().toISOString()
-    await saveActiveSession(snapshot(false))
     window.addEventListener('keydown', onKeydown)
     window.addEventListener('beforeunload', onBeforeUnload)
     startTimer()
@@ -409,10 +431,7 @@ async function handleSubmit() {
   const q = currentQuestion.value
   let isCorrect: boolean
   if (q.questionType === 'fill') {
-    // 填空题：忽略大小写和首尾空格进行比较
-    const userAnswer = selectedKey.value.trim().toLowerCase()
-    const correctAnswer = q.answerText.trim().toLowerCase()
-    isCorrect = userAnswer === correctAnswer
+    isCorrect = isFillAnswerCorrect(selectedKey.value, q.answerText)
   } else if (q.multiAnswer) {
     isCorrect = isMultiAnswerCorrect(selectedKey.value, q.answerKey)
   } else {
@@ -629,7 +648,7 @@ async function restart() {
   elapsedTime.value = 0
   // 重置考试模式状态
   if (isExamMode.value) {
-    remainingTime.value = examTimeLimit.value
+    examEndTime.value = Date.now() + examTimeLimit.value * 1000
   }
   await saveActiveSession(snapshot(false))
   startTimer()
@@ -733,7 +752,7 @@ function cancelLeave() {
       </Transition>
     </template>
 
-    <div v-else-if="finished" class="finish-page">
+    <div v-else-if="finished" class="finish-page" aria-live="polite">
       <h2>本轮完成</h2>
       <div class="finish-stat">
         <span class="finish-pct">{{ Math.round((correctCount / questions.length) * 100) }}%</span>
