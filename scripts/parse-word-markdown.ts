@@ -354,7 +354,6 @@ function main() {
     JSON.stringify(
       {
         report: reportLines,
-        generatedAt: new Date().toISOString(),
         count: questions.length,
         skippedCount: skippedEntries,
         skipped,

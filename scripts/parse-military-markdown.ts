@@ -627,7 +627,6 @@ function main() {
     JSON.stringify(
       {
         report,
-        generatedAt: new Date().toISOString(),
         count: enriched.length,
         byGroup,
         byType,

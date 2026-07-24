@@ -445,7 +445,6 @@ function main() {
     JSON.stringify(
       {
         report,
-        generatedAt: new Date().toISOString(),
         count: enriched.length,
         merged: merged.length,
       },

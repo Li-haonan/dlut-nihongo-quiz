@@ -374,11 +374,7 @@ function main() {
   fs.writeFileSync(outPath, JSON.stringify(enriched, null, 2), 'utf-8')
   fs.writeFileSync(
     path.resolve(__dirname, '../data/processed/validation-report.json'),
-    JSON.stringify(
-      { report, generatedAt: new Date().toISOString(), count: enriched.length },
-      null,
-      2,
-    ),
+    JSON.stringify({ report, count: enriched.length }, null, 2),
     'utf-8',
   )
 
