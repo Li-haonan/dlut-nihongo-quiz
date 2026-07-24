@@ -108,3 +108,32 @@ data/processed/_*.json
 data/processed/_history-practice-overlap.json
 data/raw/_compare-history-practice.md
 data/raw/military/_original/
+
+# ─── 投稿前整理：以下均为与题库项目无关或一次性产物，切勿提交 ───
+
+# 本地运维/基础设施文件（内网服务器 SSH 隧道，与题库无关，含敏感凭证）
+/configure-vps.py
+/vps-setup.sh
+/setup-systemd.sh
+/reverse-ssh.service
+/start-tunnel.sh
+/ssh-tunnel-access.md
+/ssh-tunnel-setup.md
+
+# 其他 AI 编码工具的本地运行时数据/缓存
+.omo/
+.opencode/
+
+# 题库 PDF 提取的中间图片（一次性，源 md 已提取完毕）
+/temp_pdf_images/
+
+# 一次性题库补解析/修复脚本（已用完，非长期维护的工具）
+/scripts/add-history-explanations.mjs
+/scripts/batch-add-explanations.mjs
+/_fix_military_explanations.mjs
+
+# 一次性题库审计/分析报告与笔记（非长期产物）
+/data/processed/_fix/
+/data/processed/deep-audit-report.json
+/data/processed/missing-explanations-*.json
+/fix_questions.md
