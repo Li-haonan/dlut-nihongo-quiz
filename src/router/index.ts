@@ -1,7 +1,7 @@
-import { createRouter, createWebHistory } from 'vue-router'
+import { createRouter, createWebHashHistory } from 'vue-router'
 
 const router = createRouter({
-  history: createWebHistory(import.meta.env.BASE_URL),
+  history: createWebHashHistory(),
   routes: [
     { path: '/', name: 'landing', component: () => import('../pages/LandingPage.vue') },
     { path: '/home', name: 'home', component: () => import('../pages/HomePage.vue') },
@@ -39,6 +39,11 @@ const router = createRouter({
       path: '/listening-speaking-notes',
       name: 'listening-speaking-notes',
       component: () => import('../pages/ListeningSpeakingNotesPage.vue'),
+    },
+    {
+      path: '/hidden-portal',
+      name: 'hidden-portal',
+      component: () => import('../pages/HiddenPortal.vue'),
     },
   ],
 })

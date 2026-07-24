@@ -2,10 +2,10 @@
 <html lang="zh-CN">
   <head>
     <script>
-      // GitHub Pages SPA 重定向处理
-      // 从 404.html 重定向过来时，解析路径并恢复真实 URL
+      // GitHub Pages SPA 重定向处理（hash history 兼容）
+      // 从 404.html 重定向过来时（URL 含 ?/path），恢复为 hash 格式 #/path
       ;(function (l) {
-        if (l.search[1] === '/') {
+        if (l.search && l.search[1] === '/') {
           var decoded = l.search
             .slice(1)
             .split('&')
@@ -13,10 +13,11 @@
               return s.replace(/~and~/g, '&')
             })
             .join('?')
+          // hash history 使用 #/path 格式
           window.history.replaceState(
             null,
             null,
-            l.pathname.slice(0, -1) + decoded + l.hash,
+            l.pathname.slice(0, -1) + '#' + decoded + l.hash,
           )
         }
       })(window.location)

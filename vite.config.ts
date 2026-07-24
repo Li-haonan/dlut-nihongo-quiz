@@ -51,6 +51,15 @@ export default defineConfig(({ mode }) => ({
           if (id.includes('node_modules/vue') || id.includes('node_modules/vue-router')) {
             return 'vendor'
           }
+          if (id.includes('node_modules/marked')) {
+            return 'markdown'
+          }
+          if (id.includes('node_modules/dompurify')) {
+            return 'sanitize'
+          }
+          if (id.includes('node_modules/dexie')) {
+            return 'dexie'
+          }
         },
       },
     },
