@@ -51,11 +51,7 @@ onMounted(async () => {
   await refreshList()
 })
 
-watch(activeCategory, () => {
-  refreshList()
-})
-
-watch(isUnlocked, () => {
+watch([activeCategory, isUnlocked], () => {
   refreshList()
 })
 

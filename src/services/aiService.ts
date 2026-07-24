@@ -159,7 +159,7 @@ async function parseOpenAIStream(
           callbacks.onToken(content)
         }
       } catch {
-        // 忽略解析错误，继续处理下一行
+        // 忽略 JSON 解析错误，继续处理下一行
       }
     }
   }
@@ -185,14 +185,12 @@ async function parseAnthropicStream(
     buffer = lines.pop() || ''
 
     for (const line of lines) {
-      const trimmed = line.trim()
-      if (!trimmed || !trimmed.startsWith('data: ')) continue
+      if (!line.trim() || !line.startsWith('data: ')) continue
 
-      const data = trimmed.slice(6)
+      const data = line.trim().slice(6)
 
       try {
         const parsed = JSON.parse(data)
-        // Anthropic 流式响应格式
         if (parsed.type === 'content_block_delta') {
           const content = parsed.delta?.text
           if (content) {
@@ -214,6 +212,7 @@ export async function sendStreamRequest(
   config: AIConfig,
   messages: Array<{ role: string; content: string }>,
   callbacks: AIStreamCallbacks,
+  signal?: AbortSignal,
 ): Promise<void> {
   const format = getAPIFormat(config.baseUrl)
   const baseUrl = config.baseUrl.replace(/\/$/, '')
@@ -243,6 +242,7 @@ export async function sendStreamRequest(
       method: 'POST',
       headers: buildHeaders(config.apiKey, format),
       body,
+      signal,
     })
 
     if (!response.ok) {
@@ -290,6 +290,7 @@ export async function generateExplanation(
   request: AIExplanationRequest,
   callbacks: AIStreamCallbacks,
   history: AIMessage[] = [],
+  signal?: AbortSignal,
 ): Promise<void> {
   const config = await getAIConfig()
   if (!config) {
@@ -322,7 +323,7 @@ ${request.explanation}`
   }
 
   const messages = buildMessages(systemPrompt, userMessage, history)
-  await sendStreamRequest(config, messages, callbacks)
+  await sendStreamRequest(config, messages, callbacks, signal)
 }
 
 /** 发送自由问答 */
@@ -331,6 +332,7 @@ export async function sendChatMessage(
   callbacks: AIStreamCallbacks,
   context?: { category?: string },
   history: AIMessage[] = [],
+  signal?: AbortSignal,
 ): Promise<void> {
   const config = await getAIConfig()
   if (!config) {
@@ -346,7 +348,7 @@ export async function sendChatMessage(
   }
 
   const messages = buildMessages(systemPrompt, message, history)
-  await sendStreamRequest(config, messages, callbacks)
+  await sendStreamRequest(config, messages, callbacks, signal)
 }
 
 /** 测试 API 连接 */

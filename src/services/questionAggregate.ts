@@ -88,10 +88,14 @@ export function getAllGrammarPoints(
 
 // ─── 分类计数 ─────────────────────────────────────────────
 let cachedCounts: Record<Category, number> | null = null
+let countsCacheTime = 0
+const COUNTS_CACHE_TTL = 60_000 // 1 分钟 TTL
 
 export async function getCategoryCounts(): Promise<Record<Category, number>> {
-  // 如果已缓存，直接返回
-  if (cachedCounts) return cachedCounts
+  // 缓存有效期内直接返回
+  if (cachedCounts && Date.now() - countsCacheTime < COUNTS_CACHE_TTL) {
+    return cachedCounts
+  }
 
   try {
     const base = import.meta.env.BASE_URL
@@ -103,10 +107,11 @@ export async function getCategoryCounts(): Promise<Record<Category, number>> {
         result[c.key] = meta[c.key]?.count ?? 0
       }
       cachedCounts = result
+      countsCacheTime = Date.now()
       return result
     }
   } catch {
-    // _meta.json 不存在或解析失败，走 fallback
+    console.warn('_meta.json 不存在或解析失败，走 fallback')
   }
   const entries = await Promise.all(
     CATEGORIES.map(async (c) => [c.key, (await loadQuestionBank(c.key)).length] as const),
@@ -119,6 +124,7 @@ export async function getCategoryCounts(): Promise<Record<Category, number>> {
     {} as Record<Category, number>,
   )
   cachedCounts = result
+  countsCacheTime = Date.now()
   return result
 }
 
@@ -131,19 +137,34 @@ export interface RelevantData {
 
 /**
  * 把"题库 + 该分类相关 stats"打包，调用方一次返回，避免各页面各扫一遍。
+ * 按当前分类的题目 ID 分块查询 questionStats，避免加载全表。
  */
 export async function getRelevantData(
   category: Category,
   allStats?: QuestionStats[],
   options?: { isUnlocked?: boolean },
 ): Promise<RelevantData> {
-  const [allQuestions, stats] = await Promise.all([
-    loadQuestionBank(category),
-    allStats ?? db.questionStats.toArray(),
-  ])
+  const allQuestions = await loadQuestionBank(category)
   const questions =
     options?.isUnlocked === false ? filterVisibleQuestions(allQuestions, false) : allQuestions
-  const validIds = new Set(questions.map((q) => q.id))
-  const filtered = stats.filter((s) => validIds.has(s.questionId))
-  return { questions, stats: filtered, statsMap: new Map(filtered.map((s) => [s.questionId, s])) }
+  const validIds = questions.map((q) => q.id)
+
+  let stats: QuestionStats[]
+  if (allStats) {
+    // 调用方已传入预加载的 stats，直接过滤
+    const idSet = new Set(validIds)
+    stats = allStats.filter((s) => idSet.has(s.questionId))
+  } else {
+    // 按 ID 分块查询，避免全表扫描
+    const BATCH_SIZE = 100
+    stats = []
+    for (let i = 0; i < validIds.length; i += BATCH_SIZE) {
+      const batch = validIds.slice(i, i + BATCH_SIZE)
+      const batchStats = await db.questionStats.bulkGet(batch)
+      for (const s of batchStats) {
+        if (s) stats.push(s)
+      }
+    }
+  }
+  return { questions, stats, statsMap: new Map(stats.map((s) => [s.questionId, s])) }
 }

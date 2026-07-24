@@ -44,13 +44,13 @@ export function shuffleArray<T>(arr: T[]): T[] {
 }
 
 export function shuffleQuestionOptions(q: Question): Question {
-  if (q.multiAnswer) return q
+  if (q.multiAnswer) return { ...q }
   const correctOpt = q.options.find((o) => o.key === q.answerKey)
   if (!correctOpt) return q
   const shuffled = shuffleArray(q.options)
   const correctIdx = shuffled.findIndex((o) => o.key === q.answerKey)
   const newOptions = shuffled.map((opt, i) => ({
-    key: String.fromCharCode(65 + i),
+    key: String.fromCharCode('A'.charCodeAt(0) + i),
     text: opt.text,
   }))
   return {
@@ -94,8 +94,8 @@ export async function loadQuestionBank(category: Category = 'japanese2'): Promis
 }
 
 async function doLoad(category: Category): Promise<Question[]> {
-  const base = import.meta.env.BASE_URL
-  const file = `${base}${BANK_FILES[category]}`
+  const base = import.meta.env.BASE_URL.replace(/\/+$/, '')
+  const file = `${base}/${BANK_FILES[category]}`
   const resp = await fetch(file)
   if (!resp.ok) throw new Error(`无法加载题库 ${file}: ${resp.status}`)
   const raw: Question[] = await resp.json()
@@ -131,9 +131,9 @@ export function generateSessionId(): string {
  */
 export function invalidateCache(category?: Category): void {
   if (category) {
-    cache.delete(category)
-    // 清除该分类的 idIndex 条目
+    // 先保存引用再删除缓存，避免 getQuestions 返回空数组
     const questions = getQuestions(category)
+    cache.delete(category)
     for (const q of questions) {
       idIndex.delete(q.id)
     }

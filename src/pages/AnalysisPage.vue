@@ -11,6 +11,7 @@ import { useHiddenSite } from '../composables/useHiddenSite'
 import { db } from '../db/database'
 import { truncate } from '../utils/text'
 import { stripMarkdown } from '../utils/renderMarkdown'
+import { UI } from '../constants'
 import PageSkeleton from '../components/ui/PageSkeleton.vue'
 import type { QuestionStats, Question, Attempt } from '../types/question'
 
@@ -60,12 +61,7 @@ onMounted(async () => {
   await refresh()
 })
 
-watch(activeCategory, () => {
-  refresh()
-})
-
-// 里站解锁/锁定切换时，可见题集改变，需要重算分析数据。
-watch(isUnlocked, () => {
+watch([activeCategory, isUnlocked], () => {
   refresh()
 })
 
@@ -247,11 +243,14 @@ const heatmapData = computed(() => {
     d.setDate(d.getDate() - i)
     const dateStr = d.toISOString().slice(0, 10)
     const count = countByDate.get(dateStr) ?? 0
-    // 4 档：0=无，1=1-5题，2=6-15题，3=16+题
+    // 根据 HEATMAP_LEVELS 阈值表确定等级
     let level = 0
-    if (count >= 16) level = 3
-    else if (count >= 6) level = 2
-    else if (count >= 1) level = 1
+    for (const hl of UI.HEATMAP_LEVELS) {
+      if (count >= hl.min) {
+        level = hl.level
+        break
+      }
+    }
     days.push({ date: dateStr, label: `${d.getMonth() + 1}/${d.getDate()}`, count, level })
   }
 

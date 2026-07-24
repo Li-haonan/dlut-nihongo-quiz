@@ -194,12 +194,7 @@ onMounted(async () => {
   await refresh()
 })
 
-watch(activeCategory, () => {
-  refresh()
-})
-
-// 里站解锁/锁定切换时，可见题集改变，需要重算 tag、薄弱、掌握度等。
-watch(isUnlocked, () => {
+watch([activeCategory, isUnlocked], () => {
   refresh()
 })
 
@@ -220,7 +215,7 @@ function startTagQuiz(tag: string) {
   router.push({ path: '/quiz', query: { tag, fresh: '1' } })
 }
 
-function startHistoryGroup(
+function startGroupQuiz(
   groupId: string,
   mode: 'sequential' | 'random' | 'wrong' | 'untouched',
   options?: { shuffle?: boolean; questionType?: string },
@@ -665,18 +660,15 @@ const groupViewHint = computed(() => {
             >
           </div>
           <div class="gc-actions">
-            <button
-              class="btn btn-accent btn-sm"
-              @click="startHistoryGroup(g.groupId, 'sequential')"
-            >
+            <button class="btn btn-accent btn-sm" @click="startGroupQuiz(g.groupId, 'sequential')">
               顺序
             </button>
-            <button class="btn btn-outline btn-sm" @click="startHistoryGroup(g.groupId, 'random')">
+            <button class="btn btn-outline btn-sm" @click="startGroupQuiz(g.groupId, 'random')">
               随机
             </button>
             <button
               class="btn btn-outline btn-sm"
-              @click="startHistoryGroup(g.groupId, 'sequential', { questionType: 'fill' })"
+              @click="startGroupQuiz(g.groupId, 'sequential', { questionType: 'fill' })"
             >
               填空题
             </button>
@@ -686,14 +678,14 @@ const groupViewHint = computed(() => {
               :label="`错题 (${groupStats[g.groupId]?.wrongIds.length ?? 0})`"
               :items="ORDER_ITEMS"
               :disabled="(groupStats[g.groupId]?.wrongIds.length ?? 0) === 0"
-              @select="(shuffle) => startHistoryGroup(g.groupId, 'wrong', { shuffle })"
+              @select="(shuffle) => startGroupQuiz(g.groupId, 'wrong', { shuffle })"
             />
             <ActionMenuButton
               size="sm"
               :label="`未做 (${groupStats[g.groupId]?.untouchedIds.length ?? 0})`"
               :items="ORDER_ITEMS"
               :disabled="(groupStats[g.groupId]?.untouchedIds.length ?? 0) === 0"
-              @select="(shuffle) => startHistoryGroup(g.groupId, 'untouched', { shuffle })"
+              @select="(shuffle) => startGroupQuiz(g.groupId, 'untouched', { shuffle })"
             />
             <button
               class="btn btn-sm"

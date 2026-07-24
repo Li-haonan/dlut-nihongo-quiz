@@ -83,7 +83,8 @@ export async function getSetting<K extends SettingsKey>(
   try {
     return JSON.parse(entry.value) as SettingsMap[K]
   } catch {
-    return entry.value as unknown as SettingsMap[K]
+    console.warn(`设置项 ${key} 的值不是有效 JSON，已使用默认值`)
+    return defaultValue
   }
 }
 
@@ -153,7 +154,7 @@ export async function recordAttempt(
         createDefaultStats(a.questionId, {
           attemptCount: 1,
           correctCount: a.isCorrect ? 1 : 0,
-          wrongCount: 0,
+          wrongCount: a.isCorrect ? 0 : 1,
           lastSelectedKey: a.selectedKey,
           lastCorrect: a.isCorrect,
           lastAttemptAt: a.createdAt,
@@ -199,22 +200,60 @@ export async function updateTagStats(tags: string[], isCorrect: boolean): Promis
 
 // --- Export/Import ---
 export async function exportData(): Promise<string> {
-  const [attempts, questionStats, tagStats, sessions, settings] = await Promise.all([
-    db.attempts.toArray(),
-    db.questionStats.toArray(),
-    db.tagStats.toArray(),
-    db.sessions.toArray(),
-    db.settings.toArray(),
-  ])
-  return JSON.stringify({
-    version: 2,
-    exportedAt: new Date().toISOString(),
-    attempts,
-    questionStats,
-    tagStats,
-    sessions,
-    settings,
+  // 使用 each() 流式迭代代替 toArray()，避免大量数据一次性加载到内存
+  const parts: string[] = []
+  const push = (s: string) => parts.push(s)
+
+  push('{"version":2')
+  push(`,"exportedAt":"${new Date().toISOString()}"`)
+
+  // attempts 流式处理
+  push(',"attempts":[')
+  let first = true
+  await db.attempts.each((item) => {
+    push(first ? JSON.stringify(item) : ',' + JSON.stringify(item))
+    first = false
   })
+  push(']')
+
+  // questionStats 流式处理
+  push(',"questionStats":[')
+  first = true
+  await db.questionStats.each((item) => {
+    push(first ? JSON.stringify(item) : ',' + JSON.stringify(item))
+    first = false
+  })
+  push(']')
+
+  // tagStats 流式处理
+  push(',"tagStats":[')
+  first = true
+  await db.tagStats.each((item) => {
+    push(first ? JSON.stringify(item) : ',' + JSON.stringify(item))
+    first = false
+  })
+  push(']')
+
+  // sessions 流式处理
+  push(',"sessions":[')
+  first = true
+  await db.sessions.each((item) => {
+    push(first ? JSON.stringify(item) : ',' + JSON.stringify(item))
+    first = false
+  })
+  push(']')
+
+  // settings 流式处理
+  push(',"settings":[')
+  first = true
+  await db.settings.each((item) => {
+    push(first ? JSON.stringify(item) : ',' + JSON.stringify(item))
+    first = false
+  })
+  push(']')
+
+  push('}')
+  return parts.join('')
 }
 
 export async function importData(json: string, options: { merge?: boolean } = {}): Promise<void> {
@@ -276,20 +315,23 @@ async function doMergeImport(data: Record<string, unknown>): Promise<void> {
     if (data.attempts) {
       await db.attempts.bulkAdd(data.attempts as Attempt[])
     }
-    // questionStats: 按 questionId 合并，保留更高的 masteryLevel
+    // questionStats: 批量读取后批量合并，大幅减少 IndexedDB 操作次数
     if (data.questionStats) {
       const imported = data.questionStats as QuestionStats[]
-      for (const item of imported) {
-        const existing = await db.questionStats.get(item.questionId)
+      const ids = imported.map((item) => item.questionId)
+      const existingList = await db.questionStats.bulkGet(ids)
+      const upserts: QuestionStats[] = []
+      for (let i = 0; i < imported.length; i++) {
+        const item = imported[i]
+        const existing = existingList[i]
         if (existing) {
-          // 合并策略：保留更高的 masteryLevel，累加 attemptCount
-          await db.questionStats.update(item.questionId, {
+          upserts.push({
+            ...existing,
             attemptCount: existing.attemptCount + item.attemptCount,
             correctCount: existing.correctCount + item.correctCount,
             wrongCount: existing.wrongCount + item.wrongCount,
             masteryLevel: Math.max(existing.masteryLevel, item.masteryLevel),
             isBookmarked: existing.isBookmarked || item.isBookmarked,
-            // 保留最新的答题记录
             lastSelectedKey:
               item.lastAttemptAt > existing.lastAttemptAt
                 ? item.lastSelectedKey
@@ -304,25 +346,32 @@ async function doMergeImport(data: Record<string, unknown>): Promise<void> {
               item.lastAttemptAt > existing.lastAttemptAt ? item.reviewDueAt : existing.reviewDueAt,
           })
         } else {
-          await db.questionStats.put(item)
+          upserts.push(item)
         }
       }
+      await db.questionStats.bulkPut(upserts)
     }
-    // tagStats: 按 tag 合并，累加计数
+    // tagStats: 批量读取后批量合并
     if (data.tagStats) {
       const imported = data.tagStats as TagStats[]
-      for (const item of imported) {
-        const existing = await db.tagStats.get(item.tag)
+      const tags = imported.map((item) => item.tag)
+      const existingList = await db.tagStats.bulkGet(tags)
+      const upserts: TagStats[] = []
+      for (let i = 0; i < imported.length; i++) {
+        const item = imported[i]
+        const existing = existingList[i]
         if (existing) {
-          await db.tagStats.update(item.tag, {
+          upserts.push({
+            tag: item.tag,
             attemptCount: existing.attemptCount + item.attemptCount,
             correctCount: existing.correctCount + item.correctCount,
             wrongCount: existing.wrongCount + item.wrongCount,
           })
         } else {
-          await db.tagStats.put(item)
+          upserts.push(item)
         }
       }
+      await db.tagStats.bulkPut(upserts)
     }
     // sessions: 追加
     if (data.sessions) {

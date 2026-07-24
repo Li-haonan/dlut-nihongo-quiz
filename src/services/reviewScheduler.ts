@@ -1,6 +1,6 @@
 import type { Category, QuestionStats } from '../types/question'
 import { db } from '../db/database'
-import { INTERVAL_DAYS, SCORING } from '../constants'
+import { INTERVAL_DAYS, SCORING, UI } from '../constants'
 import { loadQuestionBank, getRelevantData, filterVisibleQuestions } from './quizEngine'
 
 export interface Recommendation {
@@ -60,8 +60,8 @@ function calcIntervalDays(s: QuestionStats): number {
     ef *= 1.1
   }
 
-  // 应用 EF 到基础间隔
-  return Math.max(1, Math.round(base * ef))
+  // 应用 EF 到基础间隔，上限 365 天避免失控
+  return Math.max(1, Math.min(365, Math.round(base * ef)))
 }
 
 // 估算连续正确次数（基于 lastCorrect 和 masteryLevel）
@@ -107,7 +107,7 @@ export async function getWeakTags(
     })
   }
 
-  return results.sort((a, b) => b.priority - a.priority).slice(0, 8)
+  return results.sort((a, b) => b.priority - a.priority).slice(0, UI.WEAK_TAGS_MAX)
 }
 
 export async function getReviewQueue(

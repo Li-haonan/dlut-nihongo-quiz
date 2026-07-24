@@ -59,11 +59,7 @@ onUnmounted(() => {
   }
 })
 
-watch(activeCategory, () => {
-  refreshList()
-})
-
-watch(isUnlocked, () => {
+watch([activeCategory, isUnlocked], () => {
   refreshList()
 })
 watch(filter, () => {
