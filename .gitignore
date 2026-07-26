@@ -38,7 +38,7 @@ quiz-final.png
 homepage-redesign.png
 homepage-v2.png
 quiz-redesign.png
-party-p1-enriched.png
+/party-p1-enriched.png
 landing-page-screenshot.png
 home-page.yml
 mobile-nav.yml
@@ -62,13 +62,23 @@ docs/superpowers/
 .superpowers/
 
 # Dev screenshots and notes (grammar/quiz iteration artifacts)
-grammar-*.md
-grammar-*.png
-quiz-*.png
-calculus-*.md
-calculus-*.png
-dark-mode-*.png
-footer-check.png
+/grammar-*.md
+/grammar-*.png
+/quiz-*.png
+/calculus-*.md
+/calculus-*.png
+/dark-mode-*.png
+/footer-check.png
+
+# Root-level UI exploration screenshots
+/ai-*-test.png
+/furigana-*.png
+/notes-ai-test.png
+
+# Mobile layout iteration screenshots; README uses the stable screenshots only.
+docs/screenshots/*-before.png
+docs/screenshots/*-after.png
+docs/screenshots/*-fixed.png
 
 # Backup files
 *.bak
@@ -80,11 +90,11 @@ scripts/_*.py
 scripts/__pycache__/
 
 # Root-level temp / analysis artifacts
-_*.json
-_*.txt
-_*.py
-temp_*.json
-temp_*.txt
+/_*.json
+/_*.txt
+/_*.py
+/temp_*.json
+/temp_*.txt
 
 # One-off add/extract scripts
 scripts/add-fill-blank-questions.mjs
