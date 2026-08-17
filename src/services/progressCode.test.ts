@@ -15,7 +15,7 @@ function fullBackup() {
         attemptCount: 7,
         correctCount: 5,
         wrongCount: index % 2,
-        masteryLevel: index % 6,
+        masteryLevel: 1 + (index % 5),
         isBookmarked: index % 11 === 0,
       })),
     ),
@@ -27,7 +27,7 @@ describe('compact progress code', () => {
   it('always fits the complete 889-question state under 1000 characters', () => {
     const code = createProgressCode(fullBackup())
     expect(code.length).toBeLessThanOrEqual(MAX_PROGRESS_CODE_LENGTH)
-    expect(code.length).toBe(906)
+    expect(code.length).toBe(610)
   })
 
   it('restores learning, wrong-answer, bookmark, mastery, and daily-goal state', () => {
@@ -37,7 +37,7 @@ describe('compact progress code', () => {
     expect(data.questionStats[0]).toMatchObject({
       questionId: 'power-ai-single-q0001',
       attemptCount: 1,
-      masteryLevel: 0,
+      masteryLevel: 1,
       isBookmarked: true,
     })
     expect(data.settings).toEqual([{ key: 'dailyGoal', value: '30' }])
@@ -47,8 +47,8 @@ describe('compact progress code', () => {
     const data = JSON.parse(fullBackup())
     data.questionStats = data.questionStats.slice(0, 100)
     const code = createProgressCode(JSON.stringify(data))
-    expect(code.startsWith('DLUTPROG:2:')).toBe(true)
-    expect(code.length).toBeLessThan(300)
+    expect(code.startsWith('DLUTPROG:3:')).toBe(true)
+    expect(code.length).toBeLessThan(260)
     expect(parseProgressCode(code).summary.learnedQuestions).toBe(100)
   })
 })

@@ -9,7 +9,9 @@ const GROUPS = [
   { prefix: 'power-ai-judge-q', count: 286 },
 ] as const
 const QUESTION_COUNT = GROUPS.reduce((sum, group) => sum + group.count, 0)
-const BITS_PER_QUESTION = 6
+const LEGACY_BITS_PER_QUESTION = 6
+const BITS_PER_QUESTION = 4
+const INDEX_BITS = 10
 const HEADER_BYTES = 4
 const SPARSE_HEADER_BYTES = 6
 
@@ -60,18 +62,52 @@ function questionId(index: number): string {
   throw new Error('进度码包含未知题目')
 }
 
-function writeBits(bytes: Uint8Array, bitOffset: number, value: number) {
-  for (let bit = 0; bit < BITS_PER_QUESTION; bit += 1) {
+function writeBits(bytes: Uint8Array, bitOffset: number, value: number, width = BITS_PER_QUESTION) {
+  for (let bit = 0; bit < width; bit += 1) {
     if (value & (1 << bit)) bytes[(bitOffset + bit) >> 3] |= 1 << ((bitOffset + bit) & 7)
   }
 }
 
-function readBits(bytes: Uint8Array, bitOffset: number): number {
+function readBits(bytes: Uint8Array, bitOffset: number, width = BITS_PER_QUESTION): number {
   let value = 0
-  for (let bit = 0; bit < BITS_PER_QUESTION; bit += 1) {
+  for (let bit = 0; bit < width; bit += 1) {
     if (bytes[(bitOffset + bit) >> 3] & (1 << ((bitOffset + bit) & 7))) value |= 1 << bit
   }
   return value
+}
+
+type ProgressState = { mastery: number; bookmarked: boolean; wrong: boolean; attempted: boolean }
+
+/** Maps only valid/actionable state combinations into 14 of the 16 nibble values. */
+function encodeState(stat: Record<string, unknown>): number {
+  const mastery = Math.min(5, Math.max(0, Number(stat.masteryLevel) || 0))
+  const bookmarkBit = stat.isBookmarked === true ? 1 : 0
+  if (mastery === 0) return bookmarkBit
+  if (mastery === 1) return 2 + bookmarkBit
+  if (mastery === 2) return 4 + (Number(stat.wrongCount) > 0 ? 2 : 0) + bookmarkBit
+  return 8 + (mastery - 3) * 2 + bookmarkBit
+}
+
+function decodeState(value: number): ProgressState {
+  if (value < 2) return { mastery: 0, bookmarked: value === 1, wrong: false, attempted: false }
+  if (value < 4) return { mastery: 1, bookmarked: value === 3, wrong: true, attempted: true }
+  if (value < 8) {
+    return {
+      mastery: 2,
+      bookmarked: value % 2 === 1,
+      wrong: value >= 6,
+      attempted: true,
+    }
+  }
+  if (value < 14) {
+    return {
+      mastery: 3 + Math.floor((value - 8) / 2),
+      bookmarked: value % 2 === 1,
+      wrong: false,
+      attempted: true,
+    }
+  }
+  throw new Error('进度码包含保留状态')
 }
 
 function toBase64Url(bytes: Uint8Array): string {
@@ -93,7 +129,9 @@ function fromBase64Url(value: string): Uint8Array {
 }
 
 /**
- * Six bits per known question: mastery (3), bookmark, has-wrong-answer, attempted.
+ * Four bits per known question. Attempted is derived from mastery, and historical
+ * wrong flags are discarded once mastery reaches 3 because the wrong-book logic
+ * already considers those questions resolved.
  * This intentionally transfers the useful learning state rather than unbounded raw history.
  */
 export function createProgressCode(backupJson: string): string {
@@ -109,18 +147,13 @@ export function createProgressCode(backupJson: string): string {
   for (const stat of data.questionStats) {
     const index = questionIndex(String(stat.questionId || ''))
     if (index === null) continue
-    const mastery = Math.min(5, Math.max(0, Number(stat.masteryLevel) || 0))
-    const value =
-      mastery |
-      (stat.isBookmarked === true ? 1 << 3 : 0) |
-      (Number(stat.wrongCount) > 0 ? 1 << 4 : 0) |
-      (Number(stat.attemptCount) > 0 ? 1 << 5 : 0)
-    states[index] = value
+    states[index] = encodeState(stat)
   }
 
   const populated = Array.from(states.entries()).filter(([, value]) => value !== 0)
   const denseLength = HEADER_BYTES + Math.ceil((QUESTION_COUNT * BITS_PER_QUESTION) / 8)
-  const sparseLength = SPARSE_HEADER_BYTES + populated.length * 2
+  const sparseLength =
+    SPARSE_HEADER_BYTES + Math.ceil((populated.length * (INDEX_BITS + BITS_PER_QUESTION)) / 8)
   let bytes: Uint8Array
 
   if (sparseLength < denseLength) {
@@ -132,9 +165,9 @@ export function createProgressCode(backupJson: string): string {
     bytes[4] = populated.length >> 8
     bytes[5] = populated.length & 0xff
     populated.forEach(([index, value], position) => {
-      const packed = (index << BITS_PER_QUESTION) | value
-      bytes[SPARSE_HEADER_BYTES + position * 2] = packed >> 8
-      bytes[SPARSE_HEADER_BYTES + position * 2 + 1] = packed & 0xff
+      const offset = SPARSE_HEADER_BYTES * 8 + position * (INDEX_BITS + BITS_PER_QUESTION)
+      writeBits(bytes, offset, index, INDEX_BITS)
+      writeBits(bytes, offset + INDEX_BITS, value)
     })
   } else {
     bytes = new Uint8Array(denseLength)
@@ -147,7 +180,7 @@ export function createProgressCode(backupJson: string): string {
     )
   }
 
-  const code = `${PROGRESS_CODE_PREFIX}2:${toBase64Url(bytes)}`
+  const code = `${PROGRESS_CODE_PREFIX}3:${toBase64Url(bytes)}`
   if (code.length > MAX_PROGRESS_CODE_LENGTH) throw new Error('进度码超过 1000 字符')
   return code
 }
@@ -155,34 +188,85 @@ export function createProgressCode(backupJson: string): string {
 export function parseProgressCode(code: string): { json: string; summary: SyncSummary } {
   const normalized = code.trim().replace(/\s+/g, '')
   if (!normalized.startsWith(PROGRESS_CODE_PREFIX)) throw new Error('进度码前缀无效')
-  const match = normalized.slice(PROGRESS_CODE_PREFIX.length).match(/^([12]):(.+)$/)
+  const match = normalized.slice(PROGRESS_CODE_PREFIX.length).match(/^([123]):(.+)$/)
   if (!match) throw new Error('进度码版本无效')
   const version = Number(match[1])
   const bytes = fromBase64Url(match[2])
+  const legacyDenseLength =
+    HEADER_BYTES + Math.ceil((QUESTION_COUNT * LEGACY_BITS_PER_QUESTION) / 8)
   const denseLength = HEADER_BYTES + Math.ceil((QUESTION_COUNT * BITS_PER_QUESTION) / 8)
-  const states = new Uint8Array(QUESTION_COUNT)
+  const states: Array<ProgressState | undefined> = new Array(QUESTION_COUNT)
 
   if (version === 1) {
-    if (bytes.length !== denseLength || bytes[0] !== 1) throw new Error('进度码长度或版本无效')
+    if (bytes.length !== legacyDenseLength || bytes[0] !== 1)
+      throw new Error('进度码长度或版本无效')
     for (let index = 0; index < QUESTION_COUNT; index += 1) {
-      states[index] = readBits(bytes, HEADER_BYTES * 8 + index * BITS_PER_QUESTION)
+      const value = readBits(
+        bytes,
+        HEADER_BYTES * 8 + index * LEGACY_BITS_PER_QUESTION,
+        LEGACY_BITS_PER_QUESTION,
+      )
+      if (value) {
+        states[index] = {
+          mastery: value & 7,
+          bookmarked: Boolean(value & (1 << 3)),
+          wrong: Boolean(value & (1 << 4)),
+          attempted: Boolean(value & (1 << 5)),
+        }
+      }
     }
+  } else if (version === 2) {
+    const count =
+      bytes[0] === 1 && bytes.length >= SPARSE_HEADER_BYTES ? (bytes[4] << 8) | bytes[5] : 0
+    if (bytes[0] === 0) {
+      if (bytes.length !== legacyDenseLength) throw new Error('进度码长度无效')
+      for (let index = 0; index < QUESTION_COUNT; index += 1) {
+        const value = readBits(
+          bytes,
+          HEADER_BYTES * 8 + index * LEGACY_BITS_PER_QUESTION,
+          LEGACY_BITS_PER_QUESTION,
+        )
+        if (value)
+          states[index] = {
+            mastery: value & 7,
+            bookmarked: Boolean(value & 8),
+            wrong: Boolean(value & 16),
+            attempted: Boolean(value & 32),
+          }
+      }
+    } else if (bytes[0] === 1 && bytes.length === SPARSE_HEADER_BYTES + count * 2) {
+      for (let position = 0; position < count; position += 1) {
+        const packed =
+          (bytes[SPARSE_HEADER_BYTES + position * 2] << 8) |
+          bytes[SPARSE_HEADER_BYTES + position * 2 + 1]
+        const index = packed >> LEGACY_BITS_PER_QUESTION
+        if (index >= QUESTION_COUNT || states[index]) throw new Error('进度码题目索引无效')
+        const value = packed & 0x3f
+        states[index] = {
+          mastery: value & 7,
+          bookmarked: Boolean(value & 8),
+          wrong: Boolean(value & 16),
+          attempted: Boolean(value & 32),
+        }
+      }
+    } else throw new Error('进度码长度无效')
   } else if (bytes[0] === 0) {
     if (bytes.length !== denseLength) throw new Error('进度码长度无效')
     for (let index = 0; index < QUESTION_COUNT; index += 1) {
-      states[index] = readBits(bytes, HEADER_BYTES * 8 + index * BITS_PER_QUESTION)
+      const value = readBits(bytes, HEADER_BYTES * 8 + index * BITS_PER_QUESTION)
+      if (value) states[index] = decodeState(value)
     }
   } else if (bytes[0] === 1) {
     if (bytes.length < SPARSE_HEADER_BYTES) throw new Error('进度码长度无效')
     const count = (bytes[4] << 8) | bytes[5]
-    if (bytes.length !== SPARSE_HEADER_BYTES + count * 2) throw new Error('进度码长度无效')
+    const expectedLength =
+      SPARSE_HEADER_BYTES + Math.ceil((count * (INDEX_BITS + BITS_PER_QUESTION)) / 8)
+    if (bytes.length !== expectedLength) throw new Error('进度码长度无效')
     for (let position = 0; position < count; position += 1) {
-      const packed =
-        (bytes[SPARSE_HEADER_BYTES + position * 2] << 8) |
-        bytes[SPARSE_HEADER_BYTES + position * 2 + 1]
-      const index = packed >> BITS_PER_QUESTION
-      if (index >= QUESTION_COUNT || states[index] !== 0) throw new Error('进度码题目索引无效')
-      states[index] = packed & 0x3f
+      const offset = SPARSE_HEADER_BYTES * 8 + position * (INDEX_BITS + BITS_PER_QUESTION)
+      const index = readBits(bytes, offset, INDEX_BITS)
+      if (index >= QUESTION_COUNT || states[index]) throw new Error('进度码题目索引无效')
+      states[index] = decodeState(readBits(bytes, offset + INDEX_BITS))
     }
   } else {
     throw new Error('进度码模式无效')
@@ -190,11 +274,9 @@ export function parseProgressCode(code: string): { json: string; summary: SyncSu
 
   const questionStats: Array<Record<string, unknown>> = []
   for (let index = 0; index < QUESTION_COUNT; index += 1) {
-    const value = states[index]
-    if (value === 0) continue
-    const masteryLevel = value & 7
-    const attempted = Boolean(value & (1 << 5))
-    const wrong = Boolean(value & (1 << 4))
+    const state = states[index]
+    if (!state) continue
+    const { mastery: masteryLevel, attempted, wrong } = state
     questionStats.push({
       questionId: questionId(index),
       attemptCount: attempted ? 1 : 0,
@@ -205,7 +287,7 @@ export function parseProgressCode(code: string): { json: string; summary: SyncSu
       lastAttemptAt: '',
       masteryLevel,
       reviewDueAt: '',
-      isBookmarked: Boolean(value & (1 << 3)),
+      isBookmarked: state.bookmarked,
     })
   }
 
