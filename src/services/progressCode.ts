@@ -11,12 +11,18 @@ export interface ProgressSummary {
   sessions: number
 }
 
+import type { SyncSummary } from './syncCode'
+
+export const PROGRESS_CODE_PREFIX = 'DLUTPROG:'
+export const MAX_PROGRESS_CODE_LENGTH = 1000
+
 const GROUPS = [
   { prefix: 'power-ai-single-q', count: 366 },
   { prefix: 'power-ai-multi-q', count: 237 },
   { prefix: 'power-ai-judge-q', count: 286 },
 ] as const
 const QUESTION_COUNT = GROUPS.reduce((sum, group) => sum + group.count, 0)
+const LEGACY_BITS_PER_QUESTION = 6
 const BITS_PER_QUESTION = 4
 const INDEX_BITS = 10
 const HEADER_BYTES = 4
@@ -202,6 +208,72 @@ export function parseProgressCode(code: string): { json: string; summary: Progre
   const states: Array<ProgressState | undefined> = new Array(QUESTION_COUNT)
 
   if (bytes[0] === 0) {
+export function parseProgressCode(code: string): { json: string; summary: SyncSummary } {
+  const normalized = code.trim().replace(/\s+/g, '')
+  if (!normalized.startsWith(PROGRESS_CODE_PREFIX)) throw new Error('进度码前缀无效')
+  const match = normalized.slice(PROGRESS_CODE_PREFIX.length).match(/^([123]):(.+)$/)
+  if (!match) throw new Error('进度码版本无效')
+  const version = Number(match[1])
+  const bytes = fromBase64Url(match[2])
+  const legacyDenseLength =
+    HEADER_BYTES + Math.ceil((QUESTION_COUNT * LEGACY_BITS_PER_QUESTION) / 8)
+  const denseLength = HEADER_BYTES + Math.ceil((QUESTION_COUNT * BITS_PER_QUESTION) / 8)
+  const states: Array<ProgressState | undefined> = new Array(QUESTION_COUNT)
+
+  if (version === 1) {
+    if (bytes.length !== legacyDenseLength || bytes[0] !== 1)
+      throw new Error('进度码长度或版本无效')
+    for (let index = 0; index < QUESTION_COUNT; index += 1) {
+      const value = readBits(
+        bytes,
+        HEADER_BYTES * 8 + index * LEGACY_BITS_PER_QUESTION,
+        LEGACY_BITS_PER_QUESTION,
+      )
+      if (value) {
+        states[index] = {
+          mastery: value & 7,
+          bookmarked: Boolean(value & (1 << 3)),
+          wrong: Boolean(value & (1 << 4)),
+          attempted: Boolean(value & (1 << 5)),
+        }
+      }
+    }
+  } else if (version === 2) {
+    const count =
+      bytes[0] === 1 && bytes.length >= SPARSE_HEADER_BYTES ? (bytes[4] << 8) | bytes[5] : 0
+    if (bytes[0] === 0) {
+      if (bytes.length !== legacyDenseLength) throw new Error('进度码长度无效')
+      for (let index = 0; index < QUESTION_COUNT; index += 1) {
+        const value = readBits(
+          bytes,
+          HEADER_BYTES * 8 + index * LEGACY_BITS_PER_QUESTION,
+          LEGACY_BITS_PER_QUESTION,
+        )
+        if (value)
+          states[index] = {
+            mastery: value & 7,
+            bookmarked: Boolean(value & 8),
+            wrong: Boolean(value & 16),
+            attempted: Boolean(value & 32),
+          }
+      }
+    } else if (bytes[0] === 1 && bytes.length === SPARSE_HEADER_BYTES + count * 2) {
+      for (let position = 0; position < count; position += 1) {
+        const packed =
+          (bytes[SPARSE_HEADER_BYTES + position * 2] << 8) |
+          bytes[SPARSE_HEADER_BYTES + position * 2 + 1]
+        const index = packed >> LEGACY_BITS_PER_QUESTION
+        if (index >= QUESTION_COUNT || states[index]) throw new Error('进度码题目索引无效')
+        const value = packed & 0x3f
+        states[index] = {
+          mastery: value & 7,
+          bookmarked: Boolean(value & 8),
+          wrong: Boolean(value & 16),
+          attempted: Boolean(value & 32),
+        }
+      }
+    } else throw new Error('进度码长度无效')
+  } else if (bytes[0] === 0) {
     if (bytes.length !== denseLength) throw new Error('进度码长度无效')
     for (let index = 0; index < QUESTION_COUNT; index += 1) {
       const value = readBits(bytes, HEADER_BYTES * 8 + index * BITS_PER_QUESTION)
