@@ -41,6 +41,7 @@ export function searchQuestions(keyword: string, category?: Category): Question[
         getQuestions('history'),
         getQuestions('party'),
         getQuestions('military'),
+        getQuestions('power-ai'),
       ]
 
   // 带评分的搜索结果

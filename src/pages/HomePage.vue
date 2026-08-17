@@ -321,6 +321,7 @@ const subtitleText = computed(() => {
   if (k === 'history') return `${n} 题 · 11个刷题单 · 单选/多选/判断`
   if (k === 'party') return `${n} 题 · 7个刷题单 · 单选/多选/判断`
   if (k === 'military') return `${n} 题 · 22个刷题单 · 单选/多选/判断`
+  if (k === 'power-ai') return `${n} 题 · 3个题型 · 单选/多选/判断`
   return `${n} 题`
 })
 const tagSectionTitle = computed(() => (isWordSubBank.value ? '按课/标签复习' : '按语法标签复习'))

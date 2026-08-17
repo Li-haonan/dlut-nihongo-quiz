@@ -108,6 +108,7 @@ export const AI_SYSTEM_PROMPTS = {
       history: '中国近现代史',
       party: '党史',
       military: '军事理论',
+      'power-ai': '电力人工智能',
       notes: '学习笔记',
     }
     return `你是一个${categoryNames[category] || category}学科的辅导助手。
