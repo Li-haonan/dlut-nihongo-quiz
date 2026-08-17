@@ -219,20 +219,23 @@ export function parseProgressCode(code: string): { json: string; summary: SyncSu
     const count =
       bytes[0] === 1 && bytes.length >= SPARSE_HEADER_BYTES ? (bytes[4] << 8) | bytes[5] : 0
     if (bytes[0] === 0) {
-      if (bytes.length !== legacyDenseLength) throw new Error('进度码长度无效')
+      if (bytes.length !== legacyDenseLength) {
+        throw new Error('进度码长度无效')
+      }
       for (let index = 0; index < QUESTION_COUNT; index += 1) {
         const value = readBits(
           bytes,
           HEADER_BYTES * 8 + index * LEGACY_BITS_PER_QUESTION,
           LEGACY_BITS_PER_QUESTION,
         )
-        if (value)
+        if (value) {
           states[index] = {
             mastery: value & 7,
             bookmarked: Boolean(value & 8),
             wrong: Boolean(value & 16),
             attempted: Boolean(value & 32),
           }
+        }
       }
     } else if (bytes[0] === 1 && bytes.length === SPARSE_HEADER_BYTES + count * 2) {
       for (let position = 0; position < count; position += 1) {
@@ -249,7 +252,9 @@ export function parseProgressCode(code: string): { json: string; summary: SyncSu
           attempted: Boolean(value & 32),
         }
       }
-    } else throw new Error('进度码长度无效')
+    } else {
+      throw new Error('进度码长度无效')
+    }
   } else if (bytes[0] === 0) {
     if (bytes.length !== denseLength) throw new Error('进度码长度无效')
     for (let index = 0; index < QUESTION_COUNT; index += 1) {
