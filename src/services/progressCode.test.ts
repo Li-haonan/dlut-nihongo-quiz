@@ -42,4 +42,13 @@ describe('compact progress code', () => {
     })
     expect(data.settings).toEqual([{ key: 'dailyGoal', value: '30' }])
   })
+
+  it('uses sparse encoding for a typical partially completed bank', () => {
+    const data = JSON.parse(fullBackup())
+    data.questionStats = data.questionStats.slice(0, 100)
+    const code = createProgressCode(JSON.stringify(data))
+    expect(code.startsWith('DLUTPROG:2:')).toBe(true)
+    expect(code.length).toBeLessThan(300)
+    expect(parseProgressCode(code).summary.learnedQuestions).toBe(100)
+  })
 })

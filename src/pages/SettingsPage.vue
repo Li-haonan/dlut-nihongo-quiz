@@ -365,7 +365,7 @@ const totalCount = computed(() => Object.values(counts.value).reduce((a, b) => a
               v-model="syncCodeInput"
               class="sync-textarea"
               rows="7"
-              placeholder="DLUTPROG:1:…"
+              placeholder="DLUTPROG:2:…"
               autocomplete="off"
               spellcheck="false"
               @input="syncError = ''"

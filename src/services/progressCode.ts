@@ -1,6 +1,6 @@
 import type { SyncSummary } from './syncCode'
 
-export const PROGRESS_CODE_PREFIX = 'DLUTPROG:1:'
+export const PROGRESS_CODE_PREFIX = 'DLUTPROG:'
 export const MAX_PROGRESS_CODE_LENGTH = 1000
 
 const GROUPS = [
@@ -11,6 +11,7 @@ const GROUPS = [
 const QUESTION_COUNT = GROUPS.reduce((sum, group) => sum + group.count, 0)
 const BITS_PER_QUESTION = 6
 const HEADER_BYTES = 4
+const SPARSE_HEADER_BYTES = 6
 
 type BackupData = {
   version: number
@@ -97,13 +98,10 @@ function fromBase64Url(value: string): Uint8Array {
  */
 export function createProgressCode(backupJson: string): string {
   const data = parseBackup(backupJson)
-  const bytes = new Uint8Array(HEADER_BYTES + Math.ceil((QUESTION_COUNT * BITS_PER_QUESTION) / 8))
-  bytes[0] = 1
+  const states = new Uint8Array(QUESTION_COUNT)
   const exportedDays = Math.floor(Date.now() / 86_400_000)
-  bytes[1] = exportedDays >> 8
-  bytes[2] = exportedDays & 0xff
   const dailyGoal = data.settings.find((setting) => setting.key === 'dailyGoal')
-  bytes[3] = Math.min(
+  const dailyGoalValue = Math.min(
     200,
     Math.max(0, Number(dailyGoal?.value ? JSON.parse(String(dailyGoal.value)) : 0)),
   )
@@ -117,10 +115,39 @@ export function createProgressCode(backupJson: string): string {
       (stat.isBookmarked === true ? 1 << 3 : 0) |
       (Number(stat.wrongCount) > 0 ? 1 << 4 : 0) |
       (Number(stat.attemptCount) > 0 ? 1 << 5 : 0)
-    writeBits(bytes, HEADER_BYTES * 8 + index * BITS_PER_QUESTION, value)
+    states[index] = value
   }
 
-  const code = PROGRESS_CODE_PREFIX + toBase64Url(bytes)
+  const populated = Array.from(states.entries()).filter(([, value]) => value !== 0)
+  const denseLength = HEADER_BYTES + Math.ceil((QUESTION_COUNT * BITS_PER_QUESTION) / 8)
+  const sparseLength = SPARSE_HEADER_BYTES + populated.length * 2
+  let bytes: Uint8Array
+
+  if (sparseLength < denseLength) {
+    bytes = new Uint8Array(sparseLength)
+    bytes[0] = 1 // sparse mode
+    bytes[1] = exportedDays >> 8
+    bytes[2] = exportedDays & 0xff
+    bytes[3] = dailyGoalValue
+    bytes[4] = populated.length >> 8
+    bytes[5] = populated.length & 0xff
+    populated.forEach(([index, value], position) => {
+      const packed = (index << BITS_PER_QUESTION) | value
+      bytes[SPARSE_HEADER_BYTES + position * 2] = packed >> 8
+      bytes[SPARSE_HEADER_BYTES + position * 2 + 1] = packed & 0xff
+    })
+  } else {
+    bytes = new Uint8Array(denseLength)
+    bytes[0] = 0 // dense mode
+    bytes[1] = exportedDays >> 8
+    bytes[2] = exportedDays & 0xff
+    bytes[3] = dailyGoalValue
+    states.forEach((value, index) =>
+      writeBits(bytes, HEADER_BYTES * 8 + index * BITS_PER_QUESTION, value),
+    )
+  }
+
+  const code = `${PROGRESS_CODE_PREFIX}2:${toBase64Url(bytes)}`
   if (code.length > MAX_PROGRESS_CODE_LENGTH) throw new Error('进度码超过 1000 字符')
   return code
 }
@@ -128,13 +155,42 @@ export function createProgressCode(backupJson: string): string {
 export function parseProgressCode(code: string): { json: string; summary: SyncSummary } {
   const normalized = code.trim().replace(/\s+/g, '')
   if (!normalized.startsWith(PROGRESS_CODE_PREFIX)) throw new Error('进度码前缀无效')
-  const bytes = fromBase64Url(normalized.slice(PROGRESS_CODE_PREFIX.length))
-  const expectedLength = HEADER_BYTES + Math.ceil((QUESTION_COUNT * BITS_PER_QUESTION) / 8)
-  if (bytes.length !== expectedLength || bytes[0] !== 1) throw new Error('进度码长度或版本无效')
+  const match = normalized.slice(PROGRESS_CODE_PREFIX.length).match(/^([12]):(.+)$/)
+  if (!match) throw new Error('进度码版本无效')
+  const version = Number(match[1])
+  const bytes = fromBase64Url(match[2])
+  const denseLength = HEADER_BYTES + Math.ceil((QUESTION_COUNT * BITS_PER_QUESTION) / 8)
+  const states = new Uint8Array(QUESTION_COUNT)
+
+  if (version === 1) {
+    if (bytes.length !== denseLength || bytes[0] !== 1) throw new Error('进度码长度或版本无效')
+    for (let index = 0; index < QUESTION_COUNT; index += 1) {
+      states[index] = readBits(bytes, HEADER_BYTES * 8 + index * BITS_PER_QUESTION)
+    }
+  } else if (bytes[0] === 0) {
+    if (bytes.length !== denseLength) throw new Error('进度码长度无效')
+    for (let index = 0; index < QUESTION_COUNT; index += 1) {
+      states[index] = readBits(bytes, HEADER_BYTES * 8 + index * BITS_PER_QUESTION)
+    }
+  } else if (bytes[0] === 1) {
+    if (bytes.length < SPARSE_HEADER_BYTES) throw new Error('进度码长度无效')
+    const count = (bytes[4] << 8) | bytes[5]
+    if (bytes.length !== SPARSE_HEADER_BYTES + count * 2) throw new Error('进度码长度无效')
+    for (let position = 0; position < count; position += 1) {
+      const packed =
+        (bytes[SPARSE_HEADER_BYTES + position * 2] << 8) |
+        bytes[SPARSE_HEADER_BYTES + position * 2 + 1]
+      const index = packed >> BITS_PER_QUESTION
+      if (index >= QUESTION_COUNT || states[index] !== 0) throw new Error('进度码题目索引无效')
+      states[index] = packed & 0x3f
+    }
+  } else {
+    throw new Error('进度码模式无效')
+  }
 
   const questionStats: Array<Record<string, unknown>> = []
   for (let index = 0; index < QUESTION_COUNT; index += 1) {
-    const value = readBits(bytes, HEADER_BYTES * 8 + index * BITS_PER_QUESTION)
+    const value = states[index]
     if (value === 0) continue
     const masteryLevel = value & 7
     const attempted = Boolean(value & (1 << 5))
