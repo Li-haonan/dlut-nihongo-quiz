@@ -8,12 +8,7 @@ import { useToast } from '../composables/useToast'
 import { useSettings } from '../composables/useSettings'
 import { useAI } from '../composables/useAI'
 import { AI_DEFAULTS } from '../types/ai'
-import { parseSyncCode, type SyncSummary } from '../services/syncCode'
-import {
-  createProgressCode,
-  parseProgressCode,
-  PROGRESS_CODE_PREFIX,
-} from '../services/progressCode'
+import { createSyncCode, parseSyncCode, type SyncSummary } from '../services/syncCode'
 import type { Category } from '../types/question'
 import type { AIConfig } from '../types/ai'
 
@@ -109,12 +104,12 @@ async function copyText(text: string) {
 async function handleCopySyncCode() {
   syncing.value = true
   try {
-    const code = createProgressCode(await exportData())
+    const code = await createSyncCode(await exportData())
     await copyText(code)
-    showToast(`同步码已复制（${code.length} 字符，不超过 1000）`, 'success')
+    showToast(`同步码已复制（${code.length.toLocaleString()} 字符）`, 'success')
   } catch (error) {
     console.warn('复制同步码失败:', error)
-    showToast(error instanceof Error ? error.message : '生成进度码失败', 'error')
+    showToast('复制失败，请检查剪贴板权限', 'error')
   } finally {
     syncing.value = false
   }
@@ -142,9 +137,7 @@ async function inspectSyncCode() {
   }
   syncing.value = true
   try {
-    const result = syncCodeInput.value.trim().startsWith(PROGRESS_CODE_PREFIX)
-      ? parseProgressCode(syncCodeInput.value)
-      : await parseSyncCode(syncCodeInput.value)
+    const result = await parseSyncCode(syncCodeInput.value)
     decodedSyncJson.value = result.json
     syncSummary.value = result.summary
   } catch (error) {
@@ -320,14 +313,11 @@ const totalCount = computed(() => Object.values(counts.value).reduce((a, b) => a
       </div>
       <div class="action-row sync-actions">
         <button class="btn btn-accent" :disabled="syncing" @click="handleCopySyncCode">
-          {{ syncing ? '处理中…' : '复制同步码（≤1000字）' }}
+          {{ syncing ? '处理中…' : '复制同步码' }}
         </button>
         <button class="btn btn-outline" @click="openSyncImport">导入同步码</button>
       </div>
-      <p class="sync-hint">
-        此按钮复制的是精简同步码，不会生成五千多字符的完整历史码；包含掌握度、错题、收藏和每日目标。
-        如需完整逐次答题历史，请使用上方 JSON“导出备份”。
-      </p>
+      <p class="sync-hint">用于在设备间迁移学习进度、错题、收藏与统计，不包含 API Key。</p>
       <div class="action-row">
         <button class="btn btn-outline danger" @click="handleClear">
           {{ confirmClear ? '再次点击确认清空' : '清空所有数据' }}
@@ -343,13 +333,13 @@ const totalCount = computed(() => Object.values(counts.value).reduce((a, b) => a
             <button class="modal-close" aria-label="关闭" @click="closeSyncImport">×</button>
           </div>
           <template v-if="!syncSummary">
-            <label for="sync-code" class="sync-label">粘贴进度码或完整同步码</label>
+            <label for="sync-code" class="sync-label">粘贴以 DLUTSYNC: 开头的同步码</label>
             <textarea
               id="sync-code"
               v-model="syncCodeInput"
               class="sync-textarea"
               rows="7"
-              placeholder="DLUTPROG:3:…"
+              placeholder="DLUTSYNC:…"
               autocomplete="off"
               spellcheck="false"
               @input="syncError = ''"
@@ -367,7 +357,7 @@ const totalCount = computed(() => Object.values(counts.value).reduce((a, b) => a
             <p class="summary-title">即将导入以下数据</p>
             <dl class="sync-summary">
               <div>
-                <dt>学习记录 / 进度</dt>
+                <dt>答题记录</dt>
                 <dd>{{ syncSummary.attempts }} 条</dd>
               </div>
               <div>
