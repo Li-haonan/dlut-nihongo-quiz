@@ -3,7 +3,10 @@ import * as path from 'path'
 import { fileURLToPath } from 'url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const inputPath = path.resolve(__dirname, '../data/raw/power-ai-question-bank.md')
+const inputPath = path.resolve(
+  __dirname,
+  '../data/raw/power-ai-question-bank-dlut-quality-cleaned.md',
+)
 const outputPath = path.resolve(__dirname, '../public/power-ai-question-bank.json')
 
 type QuestionType = 'single' | 'multi' | 'judgement'

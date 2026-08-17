@@ -18,7 +18,7 @@ export const CATEGORIES: CategoryMeta[] = [
     key: 'power-ai',
     short: '电力人工智能',
     long: '电力人工智能',
-    desc: '889题 · 单选/多选/判断 · 电力行业人工智能业务理论',
+    desc: '889题 · 单选/多选/判断 · 2026年南京市职工技能大赛题库',
     icon: '电',
     bankFile: 'power-ai-question-bank.json',
     groupOrder: ['power-ai-single', 'power-ai-multi', 'power-ai-judge'],

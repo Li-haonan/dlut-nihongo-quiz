@@ -344,8 +344,8 @@ const totalCount = computed(() => Object.values(counts.value).reduce((a, b) => a
     <div class="section">
       <h2>关于</h2>
       <p class="about-text">
-        个人题库提供电力人工智能练习，支持多种刷题模式、智能错题本和掌握度分析。
-        所有学习数据均存储在浏览器本地。
+        本项目面向 2026 年南京市职工技能大赛，提供 889
+        道电力行业人工智能业务理论练习题，支持多种刷题模式、智能错题本和掌握度分析。所有学习数据均存储在浏览器本地。
       </p>
     </div>
   </div>

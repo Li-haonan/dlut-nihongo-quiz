@@ -1,7 +1,7 @@
 {
-  "name": "个人题库 · 电力人工智能",
-  "short_name": "个人题库",
-  "description": "个人电力人工智能题库",
+  "name": "电力行业人工智能业务理论题库",
+  "short_name": "电力AI题库",
+  "description": "2026年南京市职工技能大赛电力行业人工智能业务理论题库，共889题",
   "start_url": "/dlut-nihongo-quiz/",
   "scope": "/dlut-nihongo-quiz/",
   "display": "standalone",

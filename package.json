@@ -1,7 +1,7 @@
 {
   "name": "dlut-nihongo-quiz",
-  "version": "0.3.0",
-  "description": "大连理工大学国际信息与软件学院大一下《大家的日语》26-36课期末复习题库 (DLUT Japanese final-review quiz)",
+  "version": "0.4.0",
+  "description": "2026年南京市职工技能大赛电力行业人工智能业务理论在线刷题工具",
   "author": "tianxingleo",
   "license": "Apache-2.0",
   "type": "module",
