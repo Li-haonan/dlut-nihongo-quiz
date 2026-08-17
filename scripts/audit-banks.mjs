@@ -17,6 +17,7 @@ const BANKS = [
   'history-question-bank.json',
   'party-question-bank.json',
   'military-question-bank.json',
+  'power-ai-question-bank.json',
 ]
 
 const REQUIRED_FIELDS = ['id', 'groupId', 'stem', 'options', 'answerKey', 'explanation']

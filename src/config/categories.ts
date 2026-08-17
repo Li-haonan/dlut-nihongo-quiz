@@ -132,6 +132,17 @@ export const CATEGORIES: CategoryMeta[] = [
     groupViewHint:
       '每单独立计分。「按章节」组与「按优先级」组共享同一批题目；P1 必考核心建议先刷。',
   },
+  {
+    key: 'power-ai',
+    short: '电力人工智能',
+    long: '电力人工智能',
+    desc: '889题 · 单选/多选/判断 · 电力行业人工智能业务理论',
+    icon: '电',
+    bankFile: 'power-ai-question-bank.json',
+    groupOrder: ['power-ai-single', 'power-ai-multi', 'power-ai-judge'],
+    groupViewTitle: '题型',
+    groupViewHint: '按单选题、多选题和判断题分类练习。',
+  },
 ]
 
 const CATEGORY_MAP: Record<Category, CategoryMeta> = CATEGORIES.reduce(
@@ -150,6 +161,12 @@ export const NO_SHUFFLE_CATEGORIES: ReadonlySet<Category> = new Set([
   'history',
   'party',
   'military',
+  'power-ai',
 ])
 
-export const GROUPED_CATEGORIES: ReadonlySet<Category> = new Set(['history', 'party', 'military'])
+export const GROUPED_CATEGORIES: ReadonlySet<Category> = new Set([
+  'history',
+  'party',
+  'military',
+  'power-ai',
+])

@@ -7,12 +7,13 @@ import {
 } from './categories'
 
 describe('CATEGORIES config', () => {
-  it('covers all 4 categories after japanese2 merge', () => {
+  it('covers all 5 categories after japanese2 merge', () => {
     expect(CATEGORIES.map((c) => c.key).sort()).toEqual([
       'history',
       'japanese2',
       'military',
       'party',
+      'power-ai',
     ])
   })
 
@@ -38,10 +39,11 @@ describe('CATEGORIES config', () => {
     ])
   })
 
-  it('NO_SHUFFLE_CATEGORIES contains history/party/military (multi-answer banks)', () => {
+  it('NO_SHUFFLE_CATEGORIES contains the multi-answer banks', () => {
     expect(NO_SHUFFLE_CATEGORIES.has('history')).toBe(true)
     expect(NO_SHUFFLE_CATEGORIES.has('party')).toBe(true)
     expect(NO_SHUFFLE_CATEGORIES.has('military')).toBe(true)
+    expect(NO_SHUFFLE_CATEGORIES.has('power-ai')).toBe(true)
     expect(NO_SHUFFLE_CATEGORIES.has('japanese2')).toBe(false)
   })
 

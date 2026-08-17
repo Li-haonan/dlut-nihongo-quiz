@@ -1,4 +1,4 @@
-export type Category = 'japanese2' | 'history' | 'party' | 'military'
+export type Category = 'japanese2' | 'history' | 'party' | 'military' | 'power-ai'
 
 export interface SubBankMeta {
   key: string

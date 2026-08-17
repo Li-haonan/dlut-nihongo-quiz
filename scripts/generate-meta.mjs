@@ -18,6 +18,7 @@ const banks = [
   { key: 'history', file: 'history-question-bank.json' },
   { key: 'party', file: 'party-question-bank.json' },
   { key: 'military', file: 'military-question-bank.json' },
+  { key: 'power-ai', file: 'power-ai-question-bank.json' },
 ]
 
 const meta = {}

@@ -24,7 +24,7 @@ async function refresh() {
   error.value = ''
   try {
     await loadActiveCategory()
-    // 5 个分类并发加载
+    // 分类题量与学习进度并发加载
     const [c, stats] = await Promise.all([getCategoryCounts(), db.questionStats.toArray()])
     counts.value = c
     totalQuestions.value = Object.values(c).reduce((a, b) => a + b, 0)
@@ -44,6 +44,8 @@ async function refresh() {
             return id.startsWith('party-') || id.startsWith('party')
           case 'military':
             return id.startsWith('mil-') || id.startsWith('mil')
+          case 'power-ai':
+            return id.startsWith('power-ai-')
           case 'japanese2':
             // 综合日语2：排除其他学科前缀
             return (
@@ -52,7 +54,8 @@ async function refresh() {
               !id.startsWith('party-') &&
               !id.startsWith('party') &&
               !id.startsWith('mil-') &&
-              !id.startsWith('mil')
+              !id.startsWith('mil') &&
+              !id.startsWith('power-ai-')
             )
           default:
             return true
@@ -119,7 +122,7 @@ const subjectCount = computed(() => CATEGORIES.length)
       <div class="hero-badge stagger-1">DLUT · 国际信息与软件学院</div>
       <h1 class="hero-title stagger-2">题库</h1>
       <p class="hero-sub stagger-3">
-        日语语法词汇 · 近代史 · 党史 · 军事理论<br />一体化期末复习平台
+        日语语法词汇 · 近代史 · 党史 · 军事理论 · 电力人工智能<br />一体化期末复习平台
       </p>
       <p class="hero-desc stagger-4">
         覆盖 {{ totalQuestions.toLocaleString() }} 道题目，内置智能错题本、掌握度追踪、薄弱点分析。

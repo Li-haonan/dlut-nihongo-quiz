@@ -3,6 +3,7 @@ import type { Ref } from 'vue'
 import { getSetting, setSetting } from '../db/database'
 import { STORAGE_KEYS } from '../constants'
 import type { Category } from '../types/question'
+import { CATEGORIES } from '../config/categories'
 
 const activeCategory: Ref<Category> = ref<Category>('japanese2')
 const activeSubBankKey: Ref<string | null> = ref<string | null>(null)
@@ -11,7 +12,7 @@ let loadPromise: Promise<Category> | null = null
 // 旧值 word/grammar 在 v0.4 合并到 japanese2 后已废弃，自动迁移到 japanese2。
 function migrateLegacy(value: string | undefined): Category {
   if (value === 'word' || value === 'grammar') return 'japanese2'
-  return (value as Category) || 'japanese2'
+  return CATEGORIES.some((category) => category.key === value) ? (value as Category) : 'japanese2'
 }
 
 export async function loadActiveCategory(): Promise<Category> {
