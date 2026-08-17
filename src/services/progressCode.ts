@@ -1,6 +1,7 @@
 import type { SyncSummary } from './syncCode'
 
-export const PROGRESS_CODE_PREFIX = 'DLUTPROG:'
+export const PROGRESS_CODE_PREFIX = 'DLUTSYNC3:'
+const LEGACY_PROGRESS_CODE_PREFIX = 'DLUTPROG:'
 export const MAX_PROGRESS_CODE_LENGTH = 1000
 
 const GROUPS = [
@@ -180,18 +181,22 @@ export function createProgressCode(backupJson: string): string {
     )
   }
 
-  const code = `${PROGRESS_CODE_PREFIX}3:${toBase64Url(bytes)}`
+  const code = `${PROGRESS_CODE_PREFIX}${toBase64Url(bytes)}`
   if (code.length > MAX_PROGRESS_CODE_LENGTH) throw new Error('进度码超过 1000 字符')
   return code
 }
 
 export function parseProgressCode(code: string): { json: string; summary: SyncSummary } {
   const normalized = code.trim().replace(/\s+/g, '')
-  if (!normalized.startsWith(PROGRESS_CODE_PREFIX)) throw new Error('进度码前缀无效')
-  const match = normalized.slice(PROGRESS_CODE_PREFIX.length).match(/^([123]):(.+)$/)
-  if (!match) throw new Error('进度码版本无效')
-  const version = Number(match[1])
-  const bytes = fromBase64Url(match[2])
+  const isCurrentVersion = normalized.startsWith(PROGRESS_CODE_PREFIX)
+  const legacyMatch = normalized.startsWith(LEGACY_PROGRESS_CODE_PREFIX)
+    ? normalized.slice(LEGACY_PROGRESS_CODE_PREFIX.length).match(/^([123]):(.+)$/)
+    : null
+  if (!isCurrentVersion && !legacyMatch) throw new Error('进度码前缀无效')
+  const version = isCurrentVersion ? 3 : Number(legacyMatch![1])
+  const encoded = isCurrentVersion ? normalized.slice(PROGRESS_CODE_PREFIX.length) : legacyMatch![2]
+  if (!encoded) throw new Error('进度码版本无效')
+  const bytes = fromBase64Url(encoded)
   const legacyDenseLength =
     HEADER_BYTES + Math.ceil((QUESTION_COUNT * LEGACY_BITS_PER_QUESTION) / 8)
   const denseLength = HEADER_BYTES + Math.ceil((QUESTION_COUNT * BITS_PER_QUESTION) / 8)
