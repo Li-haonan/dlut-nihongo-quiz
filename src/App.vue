@@ -10,9 +10,7 @@ import {
 } from './services/categoryStore'
 import { getQuestionById } from './services/quizEngine'
 import { COURSE_TREE } from './config/courseTree'
-import { useHiddenSite } from './composables/useHiddenSite'
 import { useAI } from './composables/useAI'
-import { UI } from './constants'
 import type { Category } from './types/question'
 import SearchOverlay from './components/layout/SearchOverlay.vue'
 import TreeNav from './components/layout/TreeNav.vue'
@@ -26,47 +24,7 @@ const activeSubBank = useActiveSubBankKey()
 const searchOpen = ref(false)
 const drawerOpen = ref(false)
 
-const { isUnlocked, unlockProgress, startLongPress, cancelLongPress, lock } = useHiddenSite()
 const { initAI } = useAI()
-
-function exitHidden() {
-  lock()
-}
-
-let pressStartX = 0
-let pressStartY = 0
-function onPressStart(e: MouseEvent | TouchEvent) {
-  if (e instanceof MouseEvent) {
-    pressStartX = e.clientX
-    pressStartY = e.clientY
-  } else {
-    const t = e.touches[0]
-    pressStartX = t.clientX
-    pressStartY = t.clientY
-  }
-  startLongPress()
-}
-function onPressMove(e: MouseEvent | TouchEvent) {
-  let x: number, y: number
-  if (e instanceof MouseEvent) {
-    x = e.clientX
-    y = e.clientY
-  } else {
-    x = e.touches[0].clientX
-    y = e.touches[0].clientY
-  }
-  if (
-    Math.abs(x - pressStartX) > UI.LONG_PRESS_MOVE_THRESHOLD ||
-    Math.abs(y - pressStartY) > UI.LONG_PRESS_MOVE_THRESHOLD
-  ) {
-    cancelLongPress()
-  }
-}
-function onPressEnd() {
-  if (unlockProgress.value < 100) {
-    cancelLongPress()
-  }
-}
 
 const navLinks = [
   { to: '/', label: '首页' },
@@ -148,42 +106,16 @@ async function handleSearchNavigate(questionId: string) {
           <span></span>
           <span></span>
         </button>
-        <div class="nav-brand" @click="router.push('/')">题库</div>
+        <div class="nav-brand" @click="router.push('/')">个人题库</div>
       </div>
       <div class="nav-desktop-links">
         <RouterLink v-for="l in navLinks" :key="l.to" :to="l.to" @click="navigateTo(l.to)">{{
           l.label
         }}</RouterLink>
         <button class="search-trigger" @click="searchOpen = true">⌕ 搜索</button>
-        <a
-          class="github-star-btn"
-          href="https://github.com/tianxingleo/dlut-nihongo-quiz"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor">
-            <path
-              d="M8 .25a.75.75 0 01.673.418l1.882 3.815 4.21.612a.75.75 0 01.416 1.279l-3.046 2.97.719 4.192a.75.75 0 01-1.088.791L8 12.347l-3.766 1.98a.75.75 0 01-1.088-.79l.72-4.194L.818 6.374a.75.75 0 01.416-1.28l4.21-.611L7.327.668A.75.75 0 018 .25z"
-            />
-          </svg>
-          <span>Star</span>
-        </a>
       </div>
       <div class="nav-right-mobile">
         <button class="nav-search-icon" @click="searchOpen = true" aria-label="搜索">⌕</button>
-        <a
-          class="github-star-btn-mobile"
-          href="https://github.com/tianxingleo/dlut-nihongo-quiz"
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-label="GitHub Star"
-        >
-          <svg viewBox="0 0 16 16" width="18" height="18" fill="currentColor">
-            <path
-              d="M8 .25a.75.75 0 01.673.418l1.882 3.815 4.21.612a.75.75 0 01.416 1.279l-3.046 2.97.719 4.192a.75.75 0 01-1.088.791L8 12.347l-3.766 1.98a.75.75 0 01-1.088-.79l.72-4.194L.818 6.374a.75.75 0 01.416-1.28l4.21-.611L7.327.668A.75.75 0 018 .25z"
-            />
-          </svg>
-        </a>
       </div>
     </nav>
 
@@ -215,7 +147,7 @@ async function handleSearchNavigate(questionId: string) {
                 :active-category="activeCategory"
                 :active-sub-bank="activeSubBank"
                 :current-route="route.path"
-                :is-unlocked="isUnlocked"
+                :is-unlocked="false"
                 @select-leaf="onSelectLeaf"
               />
             </div>
@@ -231,40 +163,6 @@ async function handleSearchNavigate(questionId: string) {
         </transition>
       </router-view>
     </main>
-    <footer class="app-footer">
-      <div class="footer-inner">
-        <span
-          class="footer-copyright"
-          tabindex="0"
-          role="button"
-          aria-label="长按进入暗阁"
-          @mousedown="onPressStart"
-          @mousemove="onPressMove"
-          @mouseup="onPressEnd"
-          @mouseleave="onPressEnd"
-          @touchstart="onPressStart"
-          @touchmove="onPressMove"
-          @touchend="onPressEnd"
-          @keydown.enter.prevent="startLongPress"
-          @keydown.space.prevent="startLongPress"
-        >
-          <span class="press-ring" :style="{ width: unlockProgress + '%' }"></span>
-          题库 &copy; 2025 tianxingleo
-        </span>
-        <span class="footer-sep">·</span>
-        <a href="https://github.com/tianxingleo/dlut-nihongo-quiz" target="_blank">GitHub</a>
-        <span class="footer-sep">·</span>
-        <span>Apache-2.0</span>
-        <span class="footer-sep">·</span>
-        <span>DLUT 国际信息与软件学院</span>
-        <template v-if="isUnlocked">
-          <span class="footer-sep">·</span>
-          <button class="footer-exit-btn" @click="router.push('/hidden-portal')">暗阁</button>
-          <span class="footer-sep">·</span>
-          <button class="footer-exit-btn" @click="exitHidden">合上</button>
-        </template>
-      </div>
-    </footer>
   </div>
 
   <SearchOverlay

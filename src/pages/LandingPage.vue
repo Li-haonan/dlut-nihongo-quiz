@@ -17,7 +17,6 @@ const totalDone = ref(0)
 const totalQuestions = ref(0)
 const loading = ref(true)
 const error = ref('')
-const currentYear = new Date().getFullYear()
 
 async function refresh() {
   loading.value = true
@@ -37,29 +36,7 @@ async function refresh() {
       // 按 category 过滤 stats
       const catStats = stats.filter((s) => {
         const id = s.questionId || ''
-        switch (cat.key) {
-          case 'history':
-            return id.startsWith('hist-') || id.startsWith('hist')
-          case 'party':
-            return id.startsWith('party-') || id.startsWith('party')
-          case 'military':
-            return id.startsWith('mil-') || id.startsWith('mil')
-          case 'power-ai':
-            return id.startsWith('power-ai-')
-          case 'japanese2':
-            // 综合日语2：排除其他学科前缀
-            return (
-              !id.startsWith('hist-') &&
-              !id.startsWith('hist') &&
-              !id.startsWith('party-') &&
-              !id.startsWith('party') &&
-              !id.startsWith('mil-') &&
-              !id.startsWith('mil') &&
-              !id.startsWith('power-ai-')
-            )
-          default:
-            return true
-        }
+        return id.startsWith('power-ai-')
       })
       const done = catStats.filter((s) => s.attemptCount > 0).length
       const totalCorrect = catStats.reduce((sum, s) => sum + s.correctCount, 0)
@@ -88,28 +65,22 @@ function quickStart() {
   router.push('/home')
 }
 
-function goCalculusNotes() {
-  router.push('/calculus-notes')
-}
-
 const subjects = computed(() =>
   CATEGORIES.map((c) => ({ key: c.key, title: c.long, desc: c.desc, icon: c.icon })),
 )
 
-const subjectCount = computed(() => CATEGORIES.length)
 </script>
 
 <template>
   <div v-if="loading" class="landing">
     <section class="hero">
-      <div class="hero-badge">DLUT · 国际信息与软件学院</div>
-      <h1 class="hero-title">题库</h1>
+      <h1 class="hero-title">个人题库</h1>
       <p class="hero-sub">加载中…</p>
     </section>
   </div>
   <div v-else-if="error" class="landing">
     <section class="hero">
-      <h1 class="hero-title">题库</h1>
+      <h1 class="hero-title">个人题库</h1>
       <p class="hero-sub" style="color: var(--wrong)">{{ error }}</p>
       <div class="hero-actions">
         <button class="btn btn-accent btn-lg" @click="refresh">重试</button>
@@ -119,11 +90,8 @@ const subjectCount = computed(() => CATEGORIES.length)
   <div v-else class="landing">
     <!-- Hero -->
     <section class="hero">
-      <div class="hero-badge stagger-1">DLUT · 国际信息与软件学院</div>
-      <h1 class="hero-title stagger-2">题库</h1>
-      <p class="hero-sub stagger-3">
-        日语语法词汇 · 近代史 · 党史 · 军事理论 · 电力人工智能<br />一体化期末复习平台
-      </p>
+      <h1 class="hero-title stagger-2">个人题库</h1>
+      <p class="hero-sub stagger-3">电力人工智能题库</p>
       <p class="hero-desc stagger-4">
         覆盖 {{ totalQuestions.toLocaleString() }} 道题目，内置智能错题本、掌握度追踪、薄弱点分析。
         键盘驱动，高效刷题。
@@ -131,19 +99,6 @@ const subjectCount = computed(() => CATEGORIES.length)
       <div class="hero-actions stagger-5">
         <button class="btn btn-accent btn-lg" @click="quickStart">开始复习</button>
         <button class="btn btn-outline btn-lg" @click="router.push('/settings')">了解更多</button>
-        <a
-          class="btn btn-github btn-lg"
-          href="https://github.com/tianxingleo/dlut-nihongo-quiz"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <svg viewBox="0 0 16 16" width="18" height="18" fill="currentColor">
-            <path
-              d="M8 .25a.75.75 0 01.673.418l1.882 3.815 4.21.612a.75.75 0 01.416 1.279l-3.046 2.97.719 4.192a.75.75 0 01-1.088.791L8 12.347l-3.766 1.98a.75.75 0 01-1.088-.79l.72-4.194L.818 6.374a.75.75 0 01.416-1.28l4.21-.611L7.327.668A.75.75 0 018 .25z"
-            />
-          </svg>
-          GitHub
-        </a>
       </div>
     </section>
 
@@ -155,8 +110,8 @@ const subjectCount = computed(() => CATEGORIES.length)
       </div>
       <div class="strip-divider" />
       <div class="strip-item">
-        <span class="strip-num">{{ subjectCount }}</span>
-        <span class="strip-label">学科门类</span>
+        <span class="strip-num">1</span>
+        <span class="strip-label">专属题库</span>
       </div>
       <div class="strip-divider" />
       <div class="strip-item">
@@ -172,17 +127,8 @@ const subjectCount = computed(() => CATEGORIES.length)
 
     <!-- Subject cards -->
     <section class="subjects">
-      <h2>选择学科，开始复习</h2>
+      <h2>开始练习</h2>
       <div class="subject-grid">
-        <div class="subject-card calculus-card" @click="goCalculusNotes">
-          <div class="sc-icon">微</div>
-          <div class="sc-body">
-            <h3 class="sc-title">微积分2</h3>
-            <p class="sc-desc">第1–18课 · 级数→高斯公式 · 笔记整理</p>
-          </div>
-          <div class="sc-count">18 课</div>
-          <span class="sc-arrow">&rarr;</span>
-        </div>
         <div v-for="s in subjects" :key="s.key" class="subject-card" @click="enterSubject(s.key)">
           <div class="sc-icon">{{ s.icon }}</div>
           <div class="sc-body">
@@ -245,20 +191,10 @@ const subjectCount = computed(() => CATEGORIES.length)
     <!-- Footer CTA -->
     <section class="cta">
       <h2>准备好了吗？</h2>
-      <p>选择一个学科，开始高效刷题。</p>
+      <p>进入电力人工智能题库，开始高效刷题。</p>
       <button class="btn btn-accent btn-lg" @click="quickStart">进入仪表盘</button>
     </section>
 
-    <footer class="landing-footer">
-      <div class="footer-row">
-        <span>题库 &copy; {{ currentYear }} tianxingleo</span>
-        <span class="footer-dot">·</span>
-        <a href="https://github.com/tianxingleo/dlut-nihongo-quiz" target="_blank">GitHub</a>
-        <span class="footer-dot">·</span>
-        <span>Apache-2.0</span>
-      </div>
-      <p class="footer-note">大连理工大学国际信息与软件学院 · 期末复习辅助工具</p>
-    </footer>
   </div>
 </template>
 
