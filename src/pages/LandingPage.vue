@@ -90,7 +90,7 @@ const subjects = computed(() =>
     <!-- Hero -->
     <section class="hero">
       <h1 class="hero-title stagger-2">个人题库</h1>
-      <p class="hero-sub stagger-3">电力人工智能题库</p>
+      <p class="hero-sub stagger-3">2026年南京市职工技能大赛 · 电力行业人工智能业务理论题库</p>
       <p class="hero-desc stagger-4">
         覆盖 {{ totalQuestions.toLocaleString() }} 道题目，内置智能错题本、掌握度追踪、薄弱点分析。
         键盘驱动，高效刷题。
@@ -190,7 +190,7 @@ const subjects = computed(() =>
     <!-- Footer CTA -->
     <section class="cta">
       <h2>准备好了吗？</h2>
-      <p>进入电力人工智能题库，开始高效刷题。</p>
+      <p>进入电力行业人工智能业务理论题库，开始高效刷题。</p>
       <button class="btn btn-accent btn-lg" @click="quickStart">进入仪表盘</button>
     </section>
   </div>

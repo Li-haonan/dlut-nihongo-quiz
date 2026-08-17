@@ -1,129 +1,85 @@
-# DLUT 多学科复习题库
+# 电力行业人工智能业务理论题库
 
 [![CI](https://github.com/tianxingleo/dlut-nihongo-quiz/actions/workflows/ci.yml/badge.svg)](https://github.com/tianxingleo/dlut-nihongo-quiz/actions/workflows/ci.yml)
 [![Deploy](https://github.com/tianxingleo/dlut-nihongo-quiz/actions/workflows/deploy.yml/badge.svg)](https://github.com/tianxingleo/dlut-nihongo-quiz/actions/workflows/deploy.yml)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![Made with Vue](https://img.shields.io/badge/made%20with-Vue%203-42b883.svg)](https://vuejs.org/)
 
-大连理工大学本科生期末复习用的 Web App，覆盖综合日语、中国近现代史、党史、军事理论共 4 个学科、5,800+ 道题。最早是「大家的日语」第 26-36 课复习题库，后扩展到多学科。
+面向 **2026 年南京市职工技能大赛**的电力行业人工智能业务理论在线刷题工具。题库解析经过第二轮质量清洗，适合参赛职工日常练习、查漏补缺和考前复习。
 
-## 特性
+## 题库信息
 
-- 4 大学科，共 5,857 题：综合日语2（单词 + 语法） / 中国近现代史 / 党史 / 军事理论
-- 多题型：单选、多选、判断 —— 历史 / 党史 / 军理共 1,374 道多选题、780 道判断题
-- 每题都带详细解析 + 错选项注释，知道为什么错
-- 刷题模式：随机出题、顺序刷、按课次/章节、错题重做、弱点专练
-- 错题本：自动收集，按复习调度算法提醒重做
-- 统计分析：按学科 / 课次 / 标签统计正确率，可视化学习进度
-- 离线优先：IndexedDB 存储，关闭浏览器再打开进度还在
-- 移动端友好：响应式布局，手机刷题体验流畅
-- MD 驱动：题库源是 Markdown，parser 自动生成 JSON，PR 就能加题
+| 题型     |    题数 |
+| -------- | ------: |
+| 单选题   |     366 |
+| 多选题   |     237 |
+| 判断题   |     286 |
+| **合计** | **889** |
 
-## 学科范围
+题库源文件为 [`data/raw/power-ai-question-bank-dlut-quality-cleaned.md`](data/raw/power-ai-question-bank-dlut-quality-cleaned.md)，由脚本生成应用运行时使用的 JSON。标准答案保持原题口径，解析已进行第二轮质量清洗。
 
-| 学科         |      题数 |      多选 |    判断 | 来源                     | 用途           |
-| ------------ | --------: | --------: | ------: | ------------------------ | -------------- |
-| 综合日语2    |       963 |         0 |       0 | 单词 686 + 语法 277      | 大一下学期期末 |
-| 中国近现代史 |     2,872 |       801 |     495 | 课堂题库 + 纲要 + 习题集 | 近代史纲要期末 |
-| 党史         |     1,615 |       531 |       2 | 党史题库完整版           | 思政课复习     |
-| 军事理论     |       407 |        42 |     283 | 军理题库整理版           | 军训理论考核   |
-| **合计**     | **5,857** | **1,374** | **780** | —                        | —              |
+## 功能
 
-综合日语2 包含四个子库：单词（w26–w36）、学习通 99 题（g01–g10）、2021 年真题 79 题（g11）、2024 年真题 99 题（g21–g28）。
+- 顺序、随机、错题重刷、弱点突破和未做题练习
+- 按单选题、多选题、判断题分组刷题
+- 智能错题本、掌握度追踪和正确率分析
+- 自动保存答题进度，支持导入、导出学习数据
+- IndexedDB 本地存储，支持离线使用
+- 响应式界面和键盘快捷操作
+- 可选 AI 助手，辅助生成更详细的题目解析
 
 ## 在线使用
 
 **https://tianxingleo.top/dlut-nihongo-quiz/**
 
-无需安装。首次加载会拉题库（约 250 KB JSON），之后离线可用。
+无需安装；首次加载题库后即可在浏览器本地保存学习进度。
 
-## 截图
+## 本地运行
 
-| 首页                                                           | 刷题                                                           |
-| -------------------------------------------------------------- | -------------------------------------------------------------- |
-| <img src="docs/screenshots/home.png" width="600" alt="首页" /> | <img src="docs/screenshots/quiz.png" width="600" alt="刷题" /> |
-
-| 错题本                                                            | 分析                                                               |
-| ----------------------------------------------------------------- | ------------------------------------------------------------------ |
-| <img src="docs/screenshots/wrong.png" width="600" alt="错题本" /> | <img src="docs/screenshots/analysis.png" width="600" alt="分析" /> |
-
-## 快速开始
-
-需要 Node.js 18+（CI 用 Node 24）。
+需要 Node.js 18+（CI 使用 Node.js 24）。
 
 ```bash
 git clone https://github.com/tianxingleo/dlut-nihongo-quiz.git
 cd dlut-nihongo-quiz
 npm install
-npm run dev          # http://localhost:5173/
+npm run dev
 ```
 
-常用脚本：
+常用命令：
 
-| 命令                      | 作用                                                          |
-| ------------------------- | ------------------------------------------------------------- |
-| `npm run dev`             | 启动开发服务器                                                |
-| `npm run build`           | 生产构建（`base=/dlut-nihongo-quiz/`，含 `vue-tsc` 类型检查） |
-| `npm run preview`         | 本地预览生产构建                                              |
-| `npm run test`            | 单元测试（vitest）                                            |
-| `npm run parse:all`       | 一次性跑全部 parser                                           |
-| `npm run parse:japanese2` | 综合日语2 md → JSON（合并语法 + 单词）                        |
-| `npm run parse:history`   | 历史 md → JSON                                                |
-| `npm run parse:party`     | 党史 md → JSON                                                |
-| `npm run parse:military`  | 军事 md → JSON                                                |
-| `npm run audit:banks`     | 题库 schema + 内部去重检查                                    |
-| `npm run format`          | Prettier 自动格式化                                           |
+| 命令                     | 作用                       |
+| ------------------------ | -------------------------- |
+| `npm run dev`            | 启动本地开发服务器         |
+| `npm run build`          | 执行类型检查并构建生产版本 |
+| `npm run test`           | 运行 Vitest 测试           |
+| `npm run parse:power-ai` | 将 Markdown 题库生成 JSON  |
+| `npm run generate:meta`  | 更新题库数量元数据         |
+| `npm run audit:banks`    | 检查题库结构和重复题       |
+| `npm run format:check`   | 检查代码格式               |
 
-> 不要手改 `public/*.json` —— 它们是 parser 生成的。源在 `data/raw/` 下的 Markdown。
+> `public/power-ai-question-bank.json` 是生成文件，请勿手动修改。更新 Markdown 后运行 `npm run parse:power-ai && npm run generate:meta`。
 
-## 深入文档
+## 技术栈
 
-| 文档                                  | 内容                                                       |
-| ------------------------------------- | ---------------------------------------------------------- |
-| [项目结构](docs/project-structure.md) | 完整目录树、数据流、各模块职责                             |
-| [题库维护](docs/question-bank.md)     | 加题改题流程、Markdown 格式、多选/判断题写法、新增学科步骤 |
-| [部署](docs/deployment.md)            | GitHub Pages + Actions、自定义域名、本地预览生产构建       |
-| [贡献指南](CONTRIBUTING.md)           | Fork/PR 流程、代码风格、Commit 规范                        |
+- Vue 3、TypeScript、Vite
+- Vue Router
+- Dexie / IndexedDB
+- Vitest
 
-## 贡献
+## 项目文档
 
-欢迎提 Issue 报 bug、建议功能或加题。
-
-- 报 bug / 建议功能：[开 Issue](https://github.com/tianxingleo/dlut-nihongo-quiz/issues/new/choose)
-- 加题 / 改代码：fork → 改 → 提 PR（详见 [CONTRIBUTING.md](CONTRIBUTING.md)）
+- [项目结构](docs/project-structure.md)
+- [题库维护](docs/question-bank.md)
+- [部署说明](docs/deployment.md)
+- [贡献指南](CONTRIBUTING.md)
 
 ## 版权与免责声明
 
-- **代码**：[Apache License 2.0](LICENSE)。
-- **题目内容**：题目来源于《大家的日语》（スリーエーネットワーク出版）、大连理工大学课堂复习资料、公开题库等，**版权归原著作权人所有**。本项目仅出于**学习交流与个人复习目的**使用（fair use），不用于任何商业用途。
-- **侵权处理**：若原著作权人认为本项目侵犯其权益，请通过 [Issues](https://github.com/tianxingleo/dlut-nihongo-quiz/issues) 联系仓库所有者，确认后将在 48 小时内删除相关内容。
-- **学术诚信**：本项目用于**期末复习**，不鼓励、不协助任何形式的考试作弊。
-
-## 致谢
-
-- 大连理工大学国际信息与软件学院、马克思主义学院、军事教研室的教学老师们
-- 《大家的日语》教材编写组
-- 所有为本项目贡献过题目与代码的同学
-
----
+- **代码**采用 [Apache License 2.0](LICENSE) 许可。
+- **题目内容**版权归原著作权人所有，本项目仅用于学习交流、技能训练和个人复习，不用于商业用途。
+- 如权利人认为内容侵犯其权益，请通过 [Issues](https://github.com/tianxingleo/dlut-nihongo-quiz/issues) 联系仓库所有者。
+- 本项目用于合规复习，不鼓励或协助任何形式的考试作弊。
 
 ## English Summary
 
-A Vue 3 + Vite + TypeScript + Dexie single-page quiz app built for final-exam review at Dalian University of Technology (DLUT). Originally a Japanese-review tool for lessons 26–36 of《大家的日语》(Minna no Nihongo), it now spans **four subjects and 5,857 questions**:
-
-- Comprehensive Japanese 2 (963, including 686 vocabulary and 277 grammar, split into 学习通 / 2021 / 2024 sub-banks)
-- Modern Chinese history (2,872, including 801 multi-answer and 495 judgement)
-- CPC party history (1,615, including 531 multi-answer)
-- Military theory (407, including 42 multi-answer and 283 judgement)
-
-**Features:** single/multi/judgement question types, per-question explanations with wrong-option annotations, wrong-answer book with spaced-repetition scheduling, statistics by subject/lesson/tag, offline-first via IndexedDB, mobile-friendly responsive UI.
-
-**Live:** https://tianxingleo.top/dlut-nihongo-quiz/
-
-**Run locally:** `git clone`, `npm install`, `npm run dev` (Node 18+, CI uses 24).
-
-**Question bank:** Markdown is the source of truth under `data/raw/`; five `npm run parse:*` scripts generate the JSON consumed at runtime. Never edit `public/*.json` by hand.
-
-**License:** Apache-2.0 for code. Question content is copyrighted by the original publishers and used here for educational review only.
-
-**Contributions:** Issues and PRs welcome — see [`CONTRIBUTING.md`](CONTRIBUTING.md) and [`docs/question-bank.md`](docs/question-bank.md).
+A Vue 3, TypeScript, Vite, and Dexie quiz app for the **Power Industry Artificial Intelligence Business Theory** portion of the 2026 Nanjing Workers' Skills Competition. It contains 889 quality-reviewed questions: 366 single-answer, 237 multiple-answer, and 286 true/false questions. Features include several practice modes, a wrong-answer notebook, mastery analytics, local progress storage, offline access, and optional AI-assisted explanations.
