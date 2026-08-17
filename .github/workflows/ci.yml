@@ -22,6 +22,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Verify generated Power AI question bank
+        run: |
+          npm run parse:power-ai
+          npm run generate:meta
+          git diff --exit-code -- public/power-ai-question-bank.json public/_meta.json
+
       - name: Test
         run: npm run test
 
