@@ -68,7 +68,6 @@ function quickStart() {
 const subjects = computed(() =>
   CATEGORIES.map((c) => ({ key: c.key, title: c.long, desc: c.desc, icon: c.icon })),
 )
-
 </script>
 
 <template>
@@ -194,7 +193,6 @@ const subjects = computed(() =>
       <p>进入电力人工智能题库，开始高效刷题。</p>
       <button class="btn btn-accent btn-lg" @click="quickStart">进入仪表盘</button>
     </section>
-
   </div>
 </template>
 

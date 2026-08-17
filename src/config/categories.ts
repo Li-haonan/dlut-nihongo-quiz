@@ -39,10 +39,6 @@ export function getCategoryMeta(cat: Category): CategoryMeta {
   return CATEGORY_MAP[cat]
 }
 
-export const NO_SHUFFLE_CATEGORIES: ReadonlySet<Category> = new Set([
-  'power-ai',
-])
+export const NO_SHUFFLE_CATEGORIES: ReadonlySet<Category> = new Set(['power-ai'])
 
-export const GROUPED_CATEGORIES: ReadonlySet<Category> = new Set([
-  'power-ai',
-])
+export const GROUPED_CATEGORIES: ReadonlySet<Category> = new Set(['power-ai'])
