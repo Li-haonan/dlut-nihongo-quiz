@@ -1,7 +1,0 @@
-name = "dlut-quiz-sync"
-main = "sync-relay.js"
-compatibility_date = "2026-08-17"
-
-[[kv_namespaces]]
-binding = "SYNC_CODES"
-id = "replace-with-your-cloudflare-kv-namespace-id"
