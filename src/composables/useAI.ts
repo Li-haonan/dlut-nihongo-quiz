@@ -63,11 +63,26 @@ export function useAI() {
     currentResponse.value = ''
 
     return new Promise((resolve, reject) => {
+      let pendingText = ''
+      let renderTimer: ReturnType<typeof setTimeout> | null = null
+
+      // Updating Vue state and re-rendering Markdown for every tiny SSE token is
+      // expensive. Batch visual updates while retaining the provider's stream.
+      const flushPendingText = () => {
+        if (!pendingText) return
+        currentResponse.value += pendingText
+        pendingText = ''
+        renderTimer = null
+      }
+
       const callbacks: AIStreamCallbacks = {
         onToken(token) {
-          currentResponse.value += token
+          pendingText += token
+          if (!renderTimer) renderTimer = setTimeout(flushPendingText, 50)
         },
         onComplete(fullText) {
+          if (renderTimer) clearTimeout(renderTimer)
+          flushPendingText()
           isLoading.value = false
           // 添加到对话历史
           conversationHistory.value.push(
@@ -85,6 +100,8 @@ export function useAI() {
           resolve(fullText)
         },
         onError(err) {
+          if (renderTimer) clearTimeout(renderTimer)
+          flushPendingText()
           isLoading.value = false
           error.value = err.message
           reject(err)

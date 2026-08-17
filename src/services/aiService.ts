@@ -27,6 +27,8 @@ export class AIServiceError extends Error {
 /** API 格式类型 */
 type APIFormat = 'openai' | 'anthropic'
 
+const EXPLANATION_MAX_TOKENS = 900
+
 /** 获取 AI 配置 */
 export async function getAIConfig(): Promise<AIConfig | null> {
   const config = await getSetting('aiConfig', null)
@@ -48,6 +50,21 @@ function getAPIFormat(baseUrl: string): APIFormat {
     return 'anthropic'
   }
   return 'openai'
+}
+
+/**
+ * Accept a provider root (https://host), an API root (.../v1), or a complete
+ * chat endpoint.  Previously an entered `/v1` produced `/v1/v1/...`, which
+ * made otherwise valid configurations fail.
+ */
+export function resolveAPIEndpoint(baseUrl: string, format: APIFormat): string {
+  const normalized = baseUrl.trim().replace(/\/+$/, '')
+  if (format === 'anthropic') {
+    if (normalized.endsWith('/v1/messages')) return normalized
+    return `${normalized}${normalized.endsWith('/v1') ? '' : '/v1'}/messages`
+  }
+  if (normalized.endsWith('/chat/completions')) return normalized
+  return `${normalized}${normalized.endsWith('/v1') ? '' : '/v1'}/chat/completions`
 }
 
 /** 构建请求头 */
@@ -146,9 +163,9 @@ async function parseOpenAIStream(
 
     for (const line of lines) {
       const trimmed = line.trim()
-      if (!trimmed || !trimmed.startsWith('data: ')) continue
+      if (!trimmed || !trimmed.startsWith('data:')) continue
 
-      const data = trimmed.slice(6)
+      const data = trimmed.slice(5).trimStart()
       if (data === '[DONE]') continue
 
       try {
@@ -185,9 +202,9 @@ async function parseAnthropicStream(
     buffer = lines.pop() || ''
 
     for (const line of lines) {
-      if (!line.trim() || !line.startsWith('data: ')) continue
+      if (!line.trim() || !line.trimStart().startsWith('data:')) continue
 
-      const data = line.trim().slice(6)
+      const data = line.trim().slice(5).trimStart()
 
       try {
         const parsed = JSON.parse(data)
@@ -215,13 +232,11 @@ export async function sendStreamRequest(
   signal?: AbortSignal,
 ): Promise<void> {
   const format = getAPIFormat(config.baseUrl)
-  const baseUrl = config.baseUrl.replace(/\/$/, '')
-
   let url: string
   let body: string
 
   if (format === 'anthropic') {
-    url = `${baseUrl}/v1/messages`
+    url = resolveAPIEndpoint(config.baseUrl, format)
     const systemPrompt = messages.find((m) => m.role === 'system')?.content || ''
     const userMessages = messages.filter((m) => m.role !== 'system')
     body = buildAnthropicBody(
@@ -233,7 +248,7 @@ export async function sendStreamRequest(
       true,
     )
   } else {
-    url = `${baseUrl}/v1/chat/completions`
+    url = resolveAPIEndpoint(config.baseUrl, format)
     body = buildOpenAIBody(config.model, messages, config.maxTokens, config.temperature, true)
   }
 
@@ -289,7 +304,7 @@ export async function sendStreamRequest(
 export async function generateExplanation(
   request: AIExplanationRequest,
   callbacks: AIStreamCallbacks,
-  history: AIMessage[] = [],
+  _history: AIMessage[] = [],
   signal?: AbortSignal,
 ): Promise<void> {
   const config = await getAIConfig()
@@ -298,7 +313,8 @@ export async function generateExplanation(
     return
   }
 
-  const systemPrompt = AI_SYSTEM_PROMPTS.questionWithContext(request.category)
+  const systemPrompt = `${AI_SYSTEM_PROMPTS.questionWithContext(request.category)}
+请直接给出结论，再用精炼的要点说明依据和易错点；不要复述题目，不要写客套话，控制在 600 字以内。`
 
   // 构建用户消息
   const optionsText = request.options.map((o) => `${o.key}. ${o.text}`).join('\n')
@@ -322,8 +338,13 @@ ${request.explanation}`
 用户${request.isCorrect ? '答对了' : '答错了'}，请针对用户的理解情况进行讲解。`
   }
 
-  const messages = buildMessages(systemPrompt, userMessage, history)
-  await sendStreamRequest(config, messages, callbacks, signal)
+  // Each explanation is self-contained. Sending unrelated prior questions made
+  // the request larger, slower and occasionally caused the model to answer the
+  // previous question. A smaller output budget also substantially reduces time
+  // to completion while retaining enough room for option analysis.
+  const fastConfig = { ...config, maxTokens: Math.min(config.maxTokens, EXPLANATION_MAX_TOKENS) }
+  const messages = buildMessages(systemPrompt, userMessage)
+  await sendStreamRequest(fastConfig, messages, callbacks, signal)
 }
 
 /** 发送自由问答 */
@@ -357,14 +378,12 @@ export async function testConnection(
 ): Promise<{ success: boolean; message: string }> {
   try {
     const format = getAPIFormat(config.baseUrl)
-    const baseUrl = config.baseUrl.replace(/\/$/, '')
-
     let url: string
     let headers: Record<string, string>
     let body: string
 
     if (format === 'anthropic') {
-      url = `${baseUrl}/v1/messages`
+      url = resolveAPIEndpoint(config.baseUrl, format)
       headers = buildHeaders(config.apiKey, format)
       body = JSON.stringify({
         model: config.model,
@@ -373,7 +392,7 @@ export async function testConnection(
         messages: [{ role: 'user', content: '请回复"连接成功"这四个字。' }],
       })
     } else {
-      url = `${baseUrl}/v1/chat/completions`
+      url = resolveAPIEndpoint(config.baseUrl, format)
       headers = buildHeaders(config.apiKey, format)
       body = JSON.stringify({
         model: config.model,
