@@ -15,36 +15,6 @@ const router = createRouter({
     { path: '/history', name: 'history', component: () => import('../pages/HistoryPage.vue') },
     { path: '/analysis', name: 'analysis', component: () => import('../pages/AnalysisPage.vue') },
     { path: '/settings', name: 'settings', component: () => import('../pages/SettingsPage.vue') },
-    {
-      path: '/grammar-notes',
-      name: 'grammar-notes',
-      component: () => import('../pages/GrammarNotesPage.vue'),
-    },
-    {
-      path: '/calculus-notes',
-      name: 'calculus-notes',
-      component: () => import('../pages/CalculusNotesPage.vue'),
-    },
-    {
-      path: '/digital-circuit-notes',
-      name: 'digital-circuit-notes',
-      component: () => import('../pages/DigitalCircuitNotesPage.vue'),
-    },
-    {
-      path: '/physics-notes',
-      name: 'physics-notes',
-      component: () => import('../pages/PhysicsNotesPage.vue'),
-    },
-    {
-      path: '/listening-speaking-notes',
-      name: 'listening-speaking-notes',
-      component: () => import('../pages/ListeningSpeakingNotesPage.vue'),
-    },
-    {
-      path: '/hidden-portal',
-      name: 'hidden-portal',
-      component: () => import('../pages/HiddenPortal.vue'),
-    },
   ],
 })
 

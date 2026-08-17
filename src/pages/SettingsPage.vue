@@ -344,13 +344,8 @@ const totalCount = computed(() => Object.values(counts.value).reduce((a, b) => a
     <div class="section">
       <h2>关于</h2>
       <p class="about-text">
-        本平台整合了日语语法词汇、中国近现代史、党史、军事理论等学科的期末复习题库。
-        支持多种刷题模式、智能错题本、掌握度分析，所有数据存储在浏览器本地，无需联网。
-      </p>
-      <p class="about-links">
-        <a href="https://github.com/tianxingleo/dlut-nihongo-quiz" target="_blank">GitHub 仓库</a>
-        <span class="sep">·</span>
-        <span>Apache-2.0</span>
+        个人题库提供电力人工智能练习，支持多种刷题模式、智能错题本和掌握度分析。
+        所有学习数据均存储在浏览器本地。
       </p>
     </div>
   </div>

@@ -1,7 +1,7 @@
 {
-  "name": "DLUT 题库 · 期末复习平台",
-  "short_name": "题库",
-  "description": "日语语法词汇 · 近代史 · 党史 · 军事理论一体化期末复习平台",
+  "name": "个人题库 · 电力人工智能",
+  "short_name": "个人题库",
+  "description": "个人电力人工智能题库",
   "start_url": "/dlut-nihongo-quiz/",
   "scope": "/dlut-nihongo-quiz/",
   "display": "standalone",
