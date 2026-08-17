@@ -22,11 +22,41 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Verify generated Power AI question bank
+      # The generated JSON is intentionally not committed. CI creates it from the
+      # Markdown source so pull requests stay small while testing the real asset.
+      - name: Generate Power AI question bank
+        run: npm run parse:power-ai
+
+      - name: Verify Power AI question counts
         run: |
-          npm run parse:power-ai
-          npm run generate:meta
-          git diff --exit-code -- public/power-ai-question-bank.json public/_meta.json
+          node --input-type=module <<'NODE'
+          import { readFileSync } from 'node:fs'
+
+          const questions = JSON.parse(
+            readFileSync('public/power-ai-question-bank.json', 'utf8'),
+          )
+          const expected = { single: 366, multi: 237, judgement: 286 }
+          const actual = Object.fromEntries(
+            Object.keys(expected).map((type) => [
+              type,
+              questions.filter((question) => question.questionType === type).length,
+            ]),
+          )
+
+          if (
+            questions.length !== 889 ||
+            Object.keys(expected).some((type) => actual[type] !== expected[type])
+          ) {
+            throw new Error(
+              `Unexpected Power AI counts: ${JSON.stringify({ total: questions.length, ...actual })}`,
+            )
+          }
+
+          console.log({ total: questions.length, ...actual })
+          NODE
+
+      - name: Generate question bank metadata
+        run: npm run generate:meta
 
       - name: Test
         run: npm run test

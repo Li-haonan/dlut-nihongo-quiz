@@ -12,6 +12,10 @@ dist
 dist-ssr
 *.local
 
+# Generated during CI/Pages deployment from data/raw/power-ai-question-bank.md.
+# Keep the large derived question bank out of pull request diffs.
+/public/power-ai-question-bank.json
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
