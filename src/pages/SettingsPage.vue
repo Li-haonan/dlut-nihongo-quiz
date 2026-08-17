@@ -8,6 +8,11 @@ import { useToast } from '../composables/useToast'
 import { useSettings } from '../composables/useSettings'
 import { useAI } from '../composables/useAI'
 import { AI_DEFAULTS } from '../types/ai'
+import {
+  createProgressCode,
+  parseProgressCode,
+  type ProgressSummary,
+} from '../services/progressCode'
 import type { Category } from '../types/question'
 import type { AIConfig } from '../types/ai'
 
@@ -18,6 +23,13 @@ const counts = ref<Record<Category, number>>({} as Record<Category, number>)
 const confirmClear = ref(false)
 let clearTimer: ReturnType<typeof setTimeout> | null = null
 const appVersion = import.meta.env.PACKAGE_VERSION || '0.0.0'
+const showSyncImport = ref(false)
+const syncCodeInput = ref('')
+const syncSummary = ref<ProgressSummary | null>(null)
+const decodedSyncJson = ref('')
+const syncError = ref('')
+const syncImportMode = ref<'merge' | 'overwrite'>('merge')
+const syncing = ref(false)
 
 // AI 配置表单
 const aiForm = ref<AIConfig>({
@@ -75,6 +87,84 @@ async function handleExport() {
   a.click()
   URL.revokeObjectURL(url)
   showToast('导出成功', 'success')
+}
+
+async function copyText(text: string) {
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(text)
+    return
+  }
+  const textarea = document.createElement('textarea')
+  textarea.value = text
+  textarea.style.position = 'fixed'
+  textarea.style.opacity = '0'
+  document.body.appendChild(textarea)
+  textarea.select()
+  const copied = document.execCommand('copy')
+  textarea.remove()
+  if (!copied) throw new Error('复制失败')
+}
+
+async function handleCopySyncCode() {
+  syncing.value = true
+  try {
+    const code = createProgressCode(await exportData())
+    await copyText(code)
+    showToast(`同步码已复制（${code.length} 字符，不超过 1000）`, 'success')
+  } catch (error) {
+    console.warn('复制同步码失败:', error)
+    showToast(error instanceof Error ? error.message : '生成进度码失败', 'error')
+  } finally {
+    syncing.value = false
+  }
+}
+
+function openSyncImport() {
+  showSyncImport.value = true
+  syncCodeInput.value = ''
+  syncSummary.value = null
+  decodedSyncJson.value = ''
+  syncError.value = ''
+}
+
+function closeSyncImport() {
+  if (!syncing.value) showSyncImport.value = false
+}
+
+async function inspectSyncCode() {
+  syncError.value = ''
+  syncSummary.value = null
+  decodedSyncJson.value = ''
+  if (!syncCodeInput.value.trim()) {
+    syncError.value = '请先粘贴同步码'
+    return
+  }
+  syncing.value = true
+  try {
+    const result = parseProgressCode(syncCodeInput.value)
+    decodedSyncJson.value = result.json
+    syncSummary.value = result.summary
+  } catch (error) {
+    syncError.value = error instanceof Error ? error.message : '同步码无效'
+  } finally {
+    syncing.value = false
+  }
+}
+
+async function confirmSyncImport() {
+  if (!decodedSyncJson.value || !syncSummary.value) return
+  syncing.value = true
+  try {
+    await importData(decodedSyncJson.value, { merge: syncImportMode.value === 'merge' })
+    await refreshCounts()
+    showSyncImport.value = false
+    showToast(syncImportMode.value === 'merge' ? '同步数据已合并' : '同步数据已覆盖导入', 'success')
+  } catch (error) {
+    console.warn('同步码导入失败:', error)
+    syncError.value = '导入失败，本地数据未被更改'
+  } finally {
+    syncing.value = false
+  }
 }
 
 function handleImport() {
@@ -225,12 +315,98 @@ const totalCount = computed(() => Object.values(counts.value).reduce((a, b) => a
         <button class="btn btn-outline" @click="handleExport">导出备份</button>
         <button class="btn btn-outline" @click="handleImport">导入备份</button>
       </div>
+      <div class="action-row sync-actions">
+        <button class="btn btn-accent" :disabled="syncing" @click="handleCopySyncCode">
+          {{ syncing ? '处理中…' : '复制同步码（≤1000字）' }}
+        </button>
+        <button class="btn btn-outline" @click="openSyncImport">导入同步码</button>
+      </div>
+      <p class="sync-hint">
+        此按钮复制的是精简同步码，不会生成五千多字符的完整历史码；包含掌握度、错题、收藏和每日目标。
+        如需完整逐次答题历史，请使用上方 JSON“导出备份”。
+      </p>
       <div class="action-row">
         <button class="btn btn-outline danger" @click="handleClear">
           {{ confirmClear ? '再次点击确认清空' : '清空所有数据' }}
         </button>
       </div>
     </div>
+
+    <Teleport to="body">
+      <div v-if="showSyncImport" class="modal-backdrop" @click.self="closeSyncImport">
+        <section class="sync-modal" role="dialog" aria-modal="true" aria-labelledby="sync-title">
+          <div class="modal-header">
+            <h2 id="sync-title">导入同步码</h2>
+            <button class="modal-close" aria-label="关闭" @click="closeSyncImport">×</button>
+          </div>
+          <template v-if="!syncSummary">
+            <label for="sync-code" class="sync-label">粘贴同步码</label>
+            <textarea
+              id="sync-code"
+              v-model="syncCodeInput"
+              class="sync-textarea"
+              rows="7"
+              placeholder="DLUTPROG:3:…"
+              autocomplete="off"
+              spellcheck="false"
+              @input="syncError = ''"
+            />
+            <p v-if="syncError" class="sync-error" role="alert">{{ syncError }}</p>
+            <button
+              class="btn btn-accent modal-primary"
+              :disabled="syncing"
+              @click="inspectSyncCode"
+            >
+              {{ syncing ? '正在校验…' : '校验并查看摘要' }}
+            </button>
+          </template>
+          <template v-else>
+            <p class="summary-title">即将导入以下数据</p>
+            <dl class="sync-summary">
+              <div>
+                <dt>学习记录 / 进度</dt>
+                <dd>{{ syncSummary.attempts }} 条</dd>
+              </div>
+              <div>
+                <dt>已学习题目</dt>
+                <dd>{{ syncSummary.learnedQuestions }} 题</dd>
+              </div>
+              <div>
+                <dt>错题 / 收藏</dt>
+                <dd>{{ syncSummary.wrongQuestions }} / {{ syncSummary.bookmarks }} 题</dd>
+              </div>
+              <div>
+                <dt>标签统计 / 会话</dt>
+                <dd>{{ syncSummary.tagStats }} / {{ syncSummary.sessions }}</dd>
+              </div>
+              <div v-if="syncSummary.exportedAt">
+                <dt>生成时间</dt>
+                <dd>{{ new Date(syncSummary.exportedAt).toLocaleString() }}</dd>
+              </div>
+            </dl>
+            <div class="import-mode" role="radiogroup" aria-label="导入方式">
+              <label
+                ><input v-model="syncImportMode" type="radio" value="merge" /> 合并（推荐）</label
+              >
+              <label
+                ><input v-model="syncImportMode" type="radio" value="overwrite" />
+                覆盖本地数据</label
+              >
+            </div>
+            <p class="sync-hint">导入前会自动备份当前数据；同步码中的敏感配置会被忽略。</p>
+            <p v-if="syncError" class="sync-error" role="alert">{{ syncError }}</p>
+            <div class="modal-actions">
+              <button class="btn btn-outline" :disabled="syncing" @click="syncSummary = null">
+                返回修改
+              </button>
+              <button class="btn btn-accent" :disabled="syncing" @click="confirmSyncImport">
+                {{ syncing ? '正在导入…' : '确认导入' }}
+              </button>
+            </div>
+          </template>
+        </section>
+      </div>
+    </Teleport>
 
     <div class="section">
       <h2>AI 助手</h2>
@@ -425,6 +601,124 @@ h1 {
   display: flex;
   gap: 8px;
   margin-bottom: 8px;
+}
+.action-row .btn {
+  flex: 1;
+}
+.sync-hint {
+  margin: 4px 0 12px;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgb(0 0 0 / 55%);
+}
+.sync-modal {
+  width: min(100%, 520px);
+  max-height: calc(100dvh - 40px);
+  overflow-y: auto;
+  padding: 20px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  box-shadow: 0 20px 60px rgb(0 0 0 / 25%);
+}
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+.modal-header h2 {
+  font-size: 17px;
+}
+.modal-close {
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 22px;
+  cursor: pointer;
+}
+.sync-label,
+.summary-title {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+.sync-textarea {
+  display: block;
+  width: 100%;
+  resize: vertical;
+  padding: 12px;
+  border: 1px solid var(--border);
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.sync-textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.sync-error {
+  margin-top: 8px;
+  color: var(--wrong);
+  font-size: 13px;
+}
+.modal-primary {
+  width: 100%;
+  margin-top: 14px;
+}
+.sync-summary {
+  margin-bottom: 14px;
+  border-top: 1px solid var(--border);
+}
+.sync-summary div {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+}
+.sync-summary dt {
+  color: var(--text-muted);
+}
+.sync-summary dd {
+  color: var(--text-primary);
+  text-align: right;
+}
+.import-mode {
+  display: grid;
+  gap: 8px;
+  margin: 14px 0;
+}
+.import-mode label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  color: var(--text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+}
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
 }
 .goal-row {
   display: flex;
@@ -643,6 +937,28 @@ h1 {
 @media (max-width: 480px) {
   .form-row {
     grid-template-columns: 1fr;
+  }
+  .section {
+    padding: 16px;
+  }
+  .action-row,
+  .modal-actions {
+    flex-direction: column;
+  }
+  .action-row .btn,
+  .modal-actions .btn {
+    width: 100%;
+    min-height: 44px;
+  }
+  .modal-backdrop {
+    align-items: end;
+    padding: 0;
+  }
+  .sync-modal {
+    width: 100%;
+    max-height: 88dvh;
+    padding: 18px 16px max(18px, env(safe-area-inset-bottom));
+    border-width: 1px 0 0;
   }
 }
 </style>
