@@ -63,7 +63,28 @@ self.addEventListener('fetch', (event) => {
   const isAsset = /\.(?:js|css|svg|woff2?)$/.test(url.pathname)
   const isDocument = event.request.destination === 'document'
 
-  if (isQuizBank || isAsset || isDocument) {
+  // HTML uses network-first so one normal refresh immediately receives a newly
+  // deployed application shell instead of rendering the previous cached UI.
+  if (isDocument) {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          if (response && response.ok && response.type === 'basic') {
+            const clone = response.clone()
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone))
+          }
+          return response
+        })
+        .catch(() =>
+          caches
+            .match(event.request)
+            .then((cached) => cached || caches.match(withScope('index.html'))),
+        ),
+    )
+    return
+  }
+
+  if (isQuizBank || isAsset) {
     event.respondWith(
       caches.match(event.request).then((cached) => {
         const network = fetch(event.request).then((response) => {
@@ -72,11 +93,7 @@ self.addEventListener('fetch', (event) => {
             caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone))
           }
           return response
-        }).catch(() => {
-          // 导航请求：无缓存时回退到 index.html（SPA 壳），保证离线可访问
-          if (isDocument) return cached || caches.match(withScope('index.html'))
-          return cached
-        })
+        }).catch(() => cached)
         return cached || network
       }),
     )
