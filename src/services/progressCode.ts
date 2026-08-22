@@ -1,6 +1,7 @@
 import type { SyncSummary } from './syncCode'
 
-export const PROGRESS_CODE_PREFIX = 'DLUTPROG:'
+export const PROGRESS_CODE_PREFIX = 'DLUTSYNC3:'
+const LEGACY_PROGRESS_CODE_PREFIX = 'DLUTPROG:'
 export const MAX_PROGRESS_CODE_LENGTH = 1000
 
 const GROUPS = [
@@ -129,6 +130,20 @@ function fromBase64Url(value: string): Uint8Array {
 }
 
 /**
+ * Mobile keyboards and messaging apps may add a BOM/zero-width character,
+ * typographic quotes, or a full-width colon when a code is copied and pasted.
+ * None of those characters carries progress data, so discard them before
+ * validating the URL-safe payload.
+ */
+export function normalizeProgressCode(code: string): string {
+  return code
+    .trim()
+    .replace(/^["'“”‘’]+|["'“”‘’]+$/g, '')
+    .replace(/[\s\u200B-\u200D\u2060\uFEFF]/g, '')
+    .replace(/：/g, ':')
+}
+
+/**
  * Four bits per known question. Attempted is derived from mastery, and historical
  * wrong flags are discarded once mastery reaches 3 because the wrong-book logic
  * already considers those questions resolved.
@@ -180,18 +195,22 @@ export function createProgressCode(backupJson: string): string {
     )
   }
 
-  const code = `${PROGRESS_CODE_PREFIX}3:${toBase64Url(bytes)}`
+  const code = `${PROGRESS_CODE_PREFIX}${toBase64Url(bytes)}`
   if (code.length > MAX_PROGRESS_CODE_LENGTH) throw new Error('进度码超过 1000 字符')
   return code
 }
 
 export function parseProgressCode(code: string): { json: string; summary: SyncSummary } {
-  const normalized = code.trim().replace(/\s+/g, '')
-  if (!normalized.startsWith(PROGRESS_CODE_PREFIX)) throw new Error('进度码前缀无效')
-  const match = normalized.slice(PROGRESS_CODE_PREFIX.length).match(/^([123]):(.+)$/)
-  if (!match) throw new Error('进度码版本无效')
-  const version = Number(match[1])
-  const bytes = fromBase64Url(match[2])
+  const normalized = normalizeProgressCode(code)
+  const isCurrentVersion = normalized.startsWith(PROGRESS_CODE_PREFIX)
+  const legacyMatch = normalized.startsWith(LEGACY_PROGRESS_CODE_PREFIX)
+    ? normalized.slice(LEGACY_PROGRESS_CODE_PREFIX.length).match(/^([123]):(.+)$/)
+    : null
+  if (!isCurrentVersion && !legacyMatch) throw new Error('进度码前缀无效')
+  const version = isCurrentVersion ? 3 : Number(legacyMatch![1])
+  const encoded = isCurrentVersion ? normalized.slice(PROGRESS_CODE_PREFIX.length) : legacyMatch![2]
+  if (!encoded) throw new Error('进度码版本无效')
+  const bytes = fromBase64Url(encoded)
   const legacyDenseLength =
     HEADER_BYTES + Math.ceil((QUESTION_COUNT * LEGACY_BITS_PER_QUESTION) / 8)
   const denseLength = HEADER_BYTES + Math.ceil((QUESTION_COUNT * BITS_PER_QUESTION) / 8)
@@ -219,20 +238,23 @@ export function parseProgressCode(code: string): { json: string; summary: SyncSu
     const count =
       bytes[0] === 1 && bytes.length >= SPARSE_HEADER_BYTES ? (bytes[4] << 8) | bytes[5] : 0
     if (bytes[0] === 0) {
-      if (bytes.length !== legacyDenseLength) throw new Error('进度码长度无效')
+      if (bytes.length !== legacyDenseLength) {
+        throw new Error('进度码长度无效')
+      }
       for (let index = 0; index < QUESTION_COUNT; index += 1) {
         const value = readBits(
           bytes,
           HEADER_BYTES * 8 + index * LEGACY_BITS_PER_QUESTION,
           LEGACY_BITS_PER_QUESTION,
         )
-        if (value)
+        if (value) {
           states[index] = {
             mastery: value & 7,
             bookmarked: Boolean(value & 8),
             wrong: Boolean(value & 16),
             attempted: Boolean(value & 32),
           }
+        }
       }
     } else if (bytes[0] === 1 && bytes.length === SPARSE_HEADER_BYTES + count * 2) {
       for (let position = 0; position < count; position += 1) {
@@ -249,7 +271,9 @@ export function parseProgressCode(code: string): { json: string; summary: SyncSu
           attempted: Boolean(value & 32),
         }
       }
-    } else throw new Error('进度码长度无效')
+    } else {
+      throw new Error('进度码长度无效')
+    }
   } else if (bytes[0] === 0) {
     if (bytes.length !== denseLength) throw new Error('进度码长度无效')
     for (let index = 0; index < QUESTION_COUNT; index += 1) {

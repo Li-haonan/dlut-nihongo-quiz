@@ -27,7 +27,7 @@ describe('compact progress code', () => {
   it('always fits the complete 889-question state under 1000 characters', () => {
     const code = createProgressCode(fullBackup())
     expect(code.length).toBeLessThanOrEqual(MAX_PROGRESS_CODE_LENGTH)
-    expect(code.length).toBe(610)
+    expect(code.length).toBe(609)
   })
 
   it('restores learning, wrong-answer, bookmark, mastery, and daily-goal state', () => {
@@ -47,8 +47,22 @@ describe('compact progress code', () => {
     const data = JSON.parse(fullBackup())
     data.questionStats = data.questionStats.slice(0, 100)
     const code = createProgressCode(JSON.stringify(data))
-    expect(code.startsWith('DLUTPROG:3:')).toBe(true)
+    expect(code.startsWith('DLUTSYNC3:')).toBe(true)
     expect(code.length).toBeLessThan(260)
     expect(parseProgressCode(code).summary.learnedQuestions).toBe(100)
+  })
+
+  it('continues to import version 3 codes using the former progress-code prefix', () => {
+    const currentCode = createProgressCode(fullBackup())
+    const legacyCode = currentCode.replace('DLUTSYNC3:', 'DLUTPROG:3:')
+
+    expect(parseProgressCode(legacyCode).summary.learnedQuestions).toBe(889)
+  })
+
+  it('accepts formatting characters commonly inserted by mobile apps', () => {
+    const code = createProgressCode(fullBackup())
+    const mobilePaste = `“\uFEFF${code.replace(':', '：').replace(/(.{80})/g, '$1\u200B\n')}”`
+
+    expect(parseProgressCode(mobilePaste).summary.learnedQuestions).toBe(889)
   })
 })
