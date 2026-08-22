@@ -58,4 +58,11 @@ describe('compact progress code', () => {
 
     expect(parseProgressCode(legacyCode).summary.learnedQuestions).toBe(889)
   })
+
+  it('accepts formatting characters commonly inserted by mobile apps', () => {
+    const code = createProgressCode(fullBackup())
+    const mobilePaste = `“\uFEFF${code.replace(':', '：').replace(/(.{80})/g, '$1\u200B\n')}”`
+
+    expect(parseProgressCode(mobilePaste).summary.learnedQuestions).toBe(889)
+  })
 })

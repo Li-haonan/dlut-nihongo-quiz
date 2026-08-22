@@ -130,6 +130,20 @@ function fromBase64Url(value: string): Uint8Array {
 }
 
 /**
+ * Mobile keyboards and messaging apps may add a BOM/zero-width character,
+ * typographic quotes, or a full-width colon when a code is copied and pasted.
+ * None of those characters carries progress data, so discard them before
+ * validating the URL-safe payload.
+ */
+export function normalizeProgressCode(code: string): string {
+  return code
+    .trim()
+    .replace(/^["'“”‘’]+|["'“”‘’]+$/g, '')
+    .replace(/[\s\u200B-\u200D\u2060\uFEFF]/g, '')
+    .replace(/：/g, ':')
+}
+
+/**
  * Four bits per known question. Attempted is derived from mastery, and historical
  * wrong flags are discarded once mastery reaches 3 because the wrong-book logic
  * already considers those questions resolved.
@@ -187,7 +201,7 @@ export function createProgressCode(backupJson: string): string {
 }
 
 export function parseProgressCode(code: string): { json: string; summary: SyncSummary } {
-  const normalized = code.trim().replace(/\s+/g, '')
+  const normalized = normalizeProgressCode(code)
   const isCurrentVersion = normalized.startsWith(PROGRESS_CODE_PREFIX)
   const legacyMatch = normalized.startsWith(LEGACY_PROGRESS_CODE_PREFIX)
     ? normalized.slice(LEGACY_PROGRESS_CODE_PREFIX.length).match(/^([123]):(.+)$/)

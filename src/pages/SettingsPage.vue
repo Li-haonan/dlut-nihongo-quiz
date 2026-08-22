@@ -11,6 +11,7 @@ import { AI_DEFAULTS } from '../types/ai'
 import { parseSyncCode, type SyncSummary } from '../services/syncCode'
 import {
   createProgressCode,
+  normalizeProgressCode,
   parseProgressCode,
   PROGRESS_CODE_PREFIX,
 } from '../services/progressCode'
@@ -142,11 +143,12 @@ async function inspectSyncCode() {
   }
   syncing.value = true
   try {
-    const result = syncCodeInput.value.trim().startsWith(PROGRESS_CODE_PREFIX)
+    const pastedCode = normalizeProgressCode(syncCodeInput.value)
+    const isProgressCode =
+      pastedCode.startsWith(PROGRESS_CODE_PREFIX) || pastedCode.startsWith('DLUTPROG:')
+    const result = isProgressCode
       ? parseProgressCode(syncCodeInput.value)
-      : syncCodeInput.value.trim().startsWith('DLUTPROG:')
-        ? parseProgressCode(syncCodeInput.value)
-        : await parseSyncCode(syncCodeInput.value)
+      : await parseSyncCode(syncCodeInput.value)
     decodedSyncJson.value = result.json
     syncSummary.value = result.summary
   } catch (error) {
@@ -166,7 +168,7 @@ async function confirmSyncImport() {
     showToast(syncImportMode.value === 'merge' ? '同步数据已合并' : '同步数据已覆盖导入', 'success')
   } catch (error) {
     console.warn('同步码导入失败:', error)
-    syncError.value = '导入失败，本地数据未被更改'
+    syncError.value = error instanceof Error ? error.message : '导入失败，本地数据未被更改'
   } finally {
     syncing.value = false
   }
